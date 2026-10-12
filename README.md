@@ -50,3 +50,7 @@ Use relative import paths appropriate to the file. Use `router.push` for detail 
 ## Validation
 
 See `docs/validation.md` for checks performed and environment limitations. Mobile runtime validation is separate from compilation and web verification.
+
+## Backend setup (separate from SCRUM-23)
+
+Supabase connection scaffolding is described in [docs/supabase.md](docs/supabase.md). Copy `.env.example` to `.env` and add the development project's public configuration. The foundation remains in mock mode until real authentication and data services are implemented.
