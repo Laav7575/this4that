@@ -1,8 +1,8 @@
 import type { Conversation, Message, Post, User } from '../types';
 export const users: User[] = [
-  { id: 'maya', name: 'Maya Chen', email: 'maya@example.uwaterloo.ca', program: 'Mathematics', bio: 'Happy to trade calculus help for practical favours.', uwVerified: true, skills: ['Calculus', 'Meal prep'] },
-  { id: 'jordan', name: 'Jordan Patel', email: 'jordan@example.uwaterloo.ca', program: 'Computer Science', bio: 'Python enthusiast and weekend cyclist.', uwVerified: true, skills: ['Python', 'Technology support'] },
-  { id: 'aisha', name: 'Aisha Rahman', email: 'aisha@example.uwaterloo.ca', program: 'Engineering', bio: 'I enjoy helping neighbours and looking after pets.', uwVerified: false, skills: ['Pet sitting', 'Moving'] },
+  { id: 'maya', name: 'Maya Chen', email: 'maya@uwaterloo.ca', program: 'Mathematics', bio: 'Happy to trade calculus help for practical favours.', uwVerified: true, skills: ['Calculus', 'Meal prep'] },
+  { id: 'jordan', name: 'Jordan Patel', email: 'jordan@uwaterloo.ca', program: 'Computer Science', bio: 'Python enthusiast and weekend cyclist.', uwVerified: true, skills: ['Python', 'Technology support'] },
+  { id: 'aisha', name: 'Aisha Rahman', email: 'aisha@uwaterloo.ca', program: 'Engineering', bio: 'I enjoy helping neighbours and looking after pets.', uwVerified: false, skills: ['Pet sitting', 'Moving'] },
 ];
 export const currentUser = users[0];
 export const posts: Post[] = [
