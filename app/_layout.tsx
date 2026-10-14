@@ -17,7 +17,7 @@ export default function RootLayout() {
     headerTitleStyle: { fontFamily: theme.typography.regular, fontSize: 15 }, contentStyle: { backgroundColor: theme.colors.background },
   }}>
     <Stack.Screen name="index" options={{ headerShown: false }} />
-    <Stack.Screen name="login" options={{ title: 'Login' }} />
+    <Stack.Screen name="login" options={{ headerShown: false }} />
     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     <Stack.Screen name="post/[id]" options={{ title: 'Post Details' }} />
     <Stack.Screen name="post/new" options={{ title: 'New Post' }} />
