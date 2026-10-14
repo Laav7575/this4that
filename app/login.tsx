@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '../components/Screen';
 import { Button, Input } from '../components/ui';
 import { theme } from '../constants/theme';
+import { requestPasswordReset, signIn, signUp } from '../services/auth';
+import { createMyProfile, getProfile } from '../services/backend';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot';
 
 // Only University of Waterloo student emails are allowed.
 const isWaterlooEmail = (email: string) => /^[^\s@]+@uwaterloo\.ca$/i.test(email.trim());
@@ -18,28 +20,64 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
   const isSignUp = mode === 'signup';
+  const isForgot = mode === 'forgot';
 
   const errors = {
     name: isSignUp && !name.trim() ? 'Enter your full name.' : undefined,
     email: isWaterlooEmail(email) ? undefined : 'Use your @uwaterloo.ca email.',
-    password: isSignUp
-      ? password.length < 8 ? 'Use at least 8 characters.' : undefined
-      : password ? undefined : 'Enter your password.',
+    password: isForgot
+      ? undefined
+      : isSignUp
+        ? password.length < 8 ? 'Use at least 8 characters.' : undefined
+        : password ? undefined : 'Enter your password.',
   };
   // Errors only appear after the first submit attempt.
   const shown = (key: keyof typeof errors) => (submitted ? errors[key] : undefined);
   const hasErrors = Boolean(errors.name || errors.email || errors.password);
 
-  const submit = () => {
+  const submit = async () => {
     setSubmitted(true);
-    // No real authentication yet (see README): a valid form goes straight to Home.
-    if (!hasErrors) router.replace('/home');
+    setFormError(undefined);
+    setNotice(undefined);
+    if (hasErrors) return;
+    setLoading(true);
+    try {
+      if (isForgot) {
+        // The emailed link comes back to the reset-password screen (web: this site; Expo Go/app: a deep link).
+        await requestPasswordReset(email, Linking.createURL('/reset-password'));
+        setNotice('If an account exists for that email, a reset link is on its way. Check your inbox.');
+      } else if (isSignUp) {
+        await signUp(email, password, name.trim());
+        // With email confirmation on, there is no session until the link in the email is opened.
+        setMode('signin');
+        setSubmitted(false);
+        setPassword('');
+        setNotice('Check your @uwaterloo.ca inbox to confirm your account, then sign in.');
+      } else {
+        const { user } = await signIn(email, password);
+        // First confirmed sign-in: create the public profile row the feed needs for author names.
+        if (!(await getProfile(user.id))) {
+          const savedName = typeof user.user_metadata?.name === 'string' ? user.user_metadata.name : '';
+          await createMyProfile({ name: savedName || email.split('@')[0] });
+        }
+        // No manual redirect needed: the root layout sends signed-in users to Home.
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setSubmitted(false);
+    setFormError(undefined);
+    setNotice(undefined);
   };
 
   return (
@@ -48,11 +86,13 @@ export default function Login() {
 
       <View style={styles.hero}>
         <Text style={styles.brand}>This4That</Text>
-        <Text accessibilityRole="header" style={styles.title}>Welcome</Text>
-        <Text style={styles.subtitle}>Trade favours with fellow University of Waterloo students.</Text>
+        <Text accessibilityRole="header" style={styles.title}>{isForgot ? 'Reset password' : 'Welcome'}</Text>
+        <Text style={styles.subtitle}>
+          {isForgot ? 'Enter your @uwaterloo.ca email and we will send you a reset link.' : 'Trade favours with fellow University of Waterloo students.'}
+        </Text>
       </View>
 
-      <View style={styles.toggle}>
+      {!isForgot && <View style={styles.toggle}>
         {(['signin', 'signup'] as const).map(option => {
           const active = mode === option;
           return (
@@ -69,7 +109,7 @@ export default function Login() {
             </Pressable>
           );
         })}
-      </View>
+      </View>}
 
       <View style={styles.form}>
         {isSignUp && (
@@ -99,31 +139,32 @@ export default function Login() {
           {!shown('email') && <Text style={styles.hint}>Only @uwaterloo.ca emails can join.</Text>}
         </View>
 
-        <Input
-          label="Password"
-          placeholder={isSignUp ? 'Create a password' : 'Enter your password'}
-          value={password}
-          onChangeText={setPassword}
-          error={shown('password')}
-          secureTextEntry
-          autoComplete={isSignUp ? 'new-password' : 'password'}
-          autoCapitalize="none"
-          onSubmitEditing={submit}
-        />
+        {!isForgot && (
+          <Input
+            label="Password"
+            placeholder={isSignUp ? 'Create a password' : 'Enter your password'}
+            value={password}
+            onChangeText={setPassword}
+            error={shown('password')}
+            secureTextEntry
+            autoComplete={isSignUp ? 'new-password' : 'password'}
+            autoCapitalize="none"
+            onSubmitEditing={submit}
+          />
+        )}
 
-        {!isSignUp && <Text style={styles.forgot}>Forgot password?</Text>}
+        {mode === 'signin' && (
+          <Pressable accessibilityRole="button" onPress={() => switchMode('forgot')} style={styles.forgotButton}>
+            <Text style={styles.forgot}>Forgot password?</Text>
+          </Pressable>
+        )}
       </View>
 
-      <Button label={isSignUp ? 'Create account' : 'Sign in'} onPress={submit} />
+      {notice && <Text style={styles.notice}>{notice}</Text>}
+      {formError && <Text accessibilityRole="alert" style={styles.error}>{formError}</Text>}
 
-      <View style={styles.divider}>
-        <View style={styles.line} />
-        <Text style={styles.hint}>or</Text>
-        <View style={styles.line} />
-      </View>
-
-      {/* Placeholder: Outlook sign-in is mocked like the rest of auth. */}
-      <Button variant="secondary" label="Continue with Outlook" onPress={() => router.replace('/home')} />
+      <Button label={isForgot ? 'Send reset link' : isSignUp ? 'Create account' : 'Sign in'} onPress={submit} loading={loading} />
+      {isForgot && <Button variant="secondary" label="Back to sign in" onPress={() => switchMode('signin')} />}
     </Screen>
   );
 }
@@ -156,7 +197,8 @@ const styles = StyleSheet.create({
   form: { gap: theme.spacing.lg },
   fieldWithHint: { gap: 6 },
   hint: { ...theme.typography.caption, color: theme.colors.muted },
-  forgot: { ...theme.typography.label, color: theme.colors.text, alignSelf: 'flex-end' },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
-  line: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  forgotButton: { alignSelf: 'flex-end', minHeight: theme.dimensions.touchTarget, justifyContent: 'center' },
+  forgot: { ...theme.typography.label, color: theme.colors.text },
+  notice: { ...theme.typography.body, color: theme.colors.text, backgroundColor: theme.colors.highlight, borderRadius: theme.radius.md, padding: theme.spacing.md },
+  error: { ...theme.typography.body, color: theme.colors.error },
 });
