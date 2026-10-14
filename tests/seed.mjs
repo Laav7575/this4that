@@ -1,0 +1,30 @@
+import { PGlite } from '@electric-sql/pglite';
+import { readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const db = new PGlite();
+await db.exec(`create role anon; create role authenticated; create schema auth;
+create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
+await db.exec(await readFile('supabase/migrations/202610120001_backend.sql','utf8'));
+const seed=await readFile('supabase/seeds/development.sql','utf8');
+await assert.rejects(db.exec(seed));
+await db.exec('rollback');
+assert.equal((await db.query('select * from profiles')).rows.length,0);
+const ids=['64ef8769-cd31-44f6-a56b-d1b5d8a73eac','59e84f45-effd-4d3e-8d5c-7d3dcdc63e72','05df20ed-5d3b-4fdc-9f29-dc7a0d71d5f0'];
+for(let i=0;i<3;i++) await db.query('insert into auth.users values ($1,$2,now())',[ids[i],`fixture${i}@uwaterloo.ca`]);
+await db.exec(seed);
+await db.query('update profiles set name=\'Edited by developer\' where id=$1',[ids[0]]);
+await db.exec(seed);
+for(const [table,count] of [['profiles',3],['posts',6],['conversations',2],['conversation_participants',4],['messages',3]])
+  assert.equal(Number((await db.query(`select count(*) as count from ${table}`)).rows[0].count),count);
+assert.equal((await db.query('select name from profiles where id=$1',[ids[0]])).rows[0].name,'Edited by developer');
+await db.exec('set role authenticated');
+await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids[2]]);
+assert.equal((await db.query('select * from messages')).rows.length,1); // C can see pets chat only, not A/B moving chat.
+await db.exec('reset role');
+await db.query('update auth.users set email_confirmed_at=null where id=$1',[ids[2]]);
+await assert.rejects(db.exec(seed));
+await db.exec('rollback');
+await db.close();
+console.log('PASS: seed prerequisites, row counts, repeatability, existing-profile preservation, conversation isolation, and confirmation checks.');
