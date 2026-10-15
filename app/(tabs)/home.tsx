@@ -1,8 +1,16 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import * as Device from 'expo-device';
 import { Image } from 'expo-image';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
 import { getSupabase } from '../../lib/supabase';
@@ -10,6 +18,7 @@ import { getPosts, getProfile } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
 const profileIcon = require('../../assets/icons/profile.svg');
+const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
 
@@ -17,10 +26,16 @@ type Status = 'loading' | 'ready' | 'signedout' | 'error';
 const isPhone = Device.deviceType === Device.DeviceType.PHONE;
 
 function timeAgo(iso: string) {
-  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const minutes = Math.max(
+    0,
+    Math.round((Date.now() - new Date(iso).getTime()) / 60000),
+  );
+
   if (minutes < 60) return `${Math.max(minutes, 1)}m ago`;
+
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
+
   return `${Math.round(hours / 24)}d ago`;
 }
 
@@ -30,7 +45,11 @@ const typeOptions = [
   { value: 'Offer', label: 'Offers' },
 ];
 
-function FilterRow({ options, selected, onSelect }: {
+function FilterRow({
+  options,
+  selected,
+  onSelect,
+}: {
   options: { value: string; label: string }[];
   selected: string;
   onSelect: (value: string) => void;
@@ -44,6 +63,7 @@ function FilterRow({ options, selected, onSelect }: {
       contentContainerStyle={styles.filters}
       renderItem={({ item }) => {
         const active = item.value === selected;
+
         return (
           <Pressable
             accessibilityRole="button"
@@ -51,7 +71,18 @@ function FilterRow({ options, selected, onSelect }: {
             onPress={() => onSelect(item.value)}
             style={[styles.filter, active && styles.filterActive]}
           >
-            <Text style={[styles.filterText, { color: active ? theme.colors.surface : theme.colors.text }]}>{item.label}</Text>
+            <Text
+              style={[
+                styles.filterText,
+                {
+                  color: active
+                    ? theme.colors.surface
+                    : theme.colors.text,
+                },
+              ]}
+            >
+              {item.label}
+            </Text>
           </Pressable>
         );
       }}
@@ -61,27 +92,50 @@ function FilterRow({ options, selected, onSelect }: {
 
 function PostCard({ post, name }: { post: PostRow; name: string }) {
   const isOffer = post.type === 'Offer';
+
   return (
     <Card
       accessibilityLabel={`${name} is ${isOffer ? 'offering' : 'requesting'}: ${post.title}`}
-      onPress={() => router.push({ pathname: '/post/[id]', params: { id: post.id } })}
+      onPress={() =>
+        router.push({
+          pathname: '/post/[id]',
+          params: { id: post.id },
+        })
+      }
       style={styles.card}
     >
       <View style={styles.cardHeader}>
         <Avatar name={name} />
+
         <View style={styles.cardWho}>
           <Text style={styles.name}>{name}</Text>
-          <Text style={styles.meta}>{post.location} · {timeAgo(post.created_at)}</Text>
+          <Text style={styles.meta}>
+            {post.location} · {timeAgo(post.created_at)}
+          </Text>
         </View>
-        <View style={[styles.typeChip, isOffer ? styles.offerChip : styles.requestChip]}>
-          <Text style={styles.typeChipText}>{isOffer ? 'Offering' : 'Requesting'}</Text>
+
+        <View
+          style={[
+            styles.typeChip,
+            isOffer ? styles.offerChip : styles.requestChip,
+          ]}
+        >
+          <Text style={styles.typeChipText}>
+            {isOffer ? 'Offering' : 'Requesting'}
+          </Text>
         </View>
       </View>
+
       <Text style={styles.postTitle}>{post.title}</Text>
       <Text style={styles.postBody}>{post.description}</Text>
+
       <View style={styles.tags}>
-        <View style={styles.tag}><Text style={styles.tagText}>{post.category}</Text></View>
-        <View style={styles.tag}><Text style={styles.tagText}>{post.availability}</Text></View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{post.category}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{post.availability}</Text>
+        </View>
       </View>
     </Card>
   );
@@ -89,7 +143,8 @@ function PostCard({ post, name }: { post: PostRow; name: string }) {
 
 export default function Home() {
   const navigation = useNavigation();
-  const columns = isPhone ? 1 : 3; // phones: one post per row; everything else: three
+  const columns = isPhone ? 1 : 3;
+
   const [category, setCategory] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [posts, setPosts] = useState<PostRow[]>([]);
@@ -97,46 +152,148 @@ export default function Home() {
   const [status, setStatus] = useState<Status>('loading');
   const [message, setMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const load = useCallback(async () => {
+  // Refs avoid rerendering and restarting the focus effect for every page.
+  const nextOffset = useRef(0);
+  const loadingRef = useRef(false);
+
+  const load = useCallback(async (reset = true) => {
+    // Prevent overlapping requests.
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
+
+    if (reset) {
+      nextOffset.current = 0;
+      setStatus('loading');
+      setHasMore(true);
+      setMessage('');
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      // The database only returns data to a signed-in, confirmed @uwaterloo.ca account.
-      const { data } = await getSupabase().auth.getSession();
+      // The database only returns data to a signed-in,
+      // confirmed @uwaterloo.ca account.
+      const { data, error } = await getSupabase().auth.getSession();
+
+      if (error) throw error;
+
       if (!data.session) {
+        setPosts([]);
+        setNames({});
+        setHasMore(false);
         setStatus('signedout');
         return;
       }
+
       const myId = data.session.user.id;
-      // Requests and offers, minus anything the signed-in user posted themselves.
-      const rows = (await getPosts({ limit: 50 })).filter(row => row.author_id !== myId);
-      const authorIds = Array.from(new Set(rows.map(row => row.author_id)));
-      const profiles = await Promise.all(authorIds.map(id => getProfile(id)));
+      const offset = nextOffset.current;
+
+      // Fetch one page of posts from Supabase.
+      const rows = await getPosts({
+        offset,
+        limit: PAGE_SIZE,
+      });
+
+      // Advance by all database rows, including our own posts.
+      nextOffset.current = offset + rows.length;
+      setHasMore(rows.length === PAGE_SIZE);
+
+      // Exclude posts created by the signed-in user.
+      const filteredRows = rows.filter(
+        row => row.author_id !== myId,
+      );
+
+      // Fetch profiles only for authors in this page.
+      const authorIds = Array.from(
+        new Set(filteredRows.map(row => row.author_id)),
+      );
+
+      const profiles = await Promise.all(
+        authorIds.map(id => getProfile(id)),
+      );
+
       const byId: Record<string, string> = {};
-      profiles.forEach(profile => { if (profile) byId[profile.id] = profile.name; });
-      setPosts(rows);
-      setNames(byId);
+
+      profiles.forEach(profile => {
+        if (profile) byId[profile.id] = profile.name;
+      });
+
+      // Replace the feed on refresh; append on infinite scroll.
+      setPosts(current => {
+        if (reset) return filteredRows;
+
+        const existingIds = new Set(current.map(post => post.id));
+
+        return [
+          ...current,
+          ...filteredRows.filter(
+            post => !existingIds.has(post.id),
+          ),
+        ];
+      });
+
+      setNames(current => ({ ...current, ...byId }));
       setStatus('ready');
+      setMessage('');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not load posts.');
-      setStatus('error');
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not load posts.',
+      );
+
+      if (reset) {
+        setStatus('error');
+      }
     } finally {
+      loadingRef.current = false;
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, []);
 
-  // Reload every time the Home tab comes into focus (for example after creating a post).
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  const loadMore = useCallback(() => {
+    if (
+      hasMore &&
+      status === 'ready' &&
+      !loadingRef.current
+    ) {
+      void load(false);
+    }
+  }, [hasMore, status, load]);
+
+  // Reload when Home comes into focus, such as after creating a post.
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   const categories = useMemo(
-    () => [{ value: 'All', label: 'All categories' }, ...Array.from(new Set(posts.map(post => post.category))).map(value => ({ value, label: value }))],
+    () => [
+      { value: 'All', label: 'All categories' },
+      ...Array.from(new Set(posts.map(post => post.category))).map(
+        value => ({ value, label: value }),
+      ),
+    ],
     [posts],
   );
+
   const visible = useMemo(
-    () => posts.filter(post => (typeFilter === 'All' || post.type === typeFilter) && (category === 'All' || post.category === category)),
+    () =>
+      posts.filter(
+        post =>
+          (typeFilter === 'All' || post.type === typeFilter) &&
+          (category === 'All' || post.category === category),
+      ),
     [category, typeFilter, posts],
   );
 
-  // Header: profile icon on the right (replaces the shared "+" for this screen only).
+  // Header: profile icon on the right.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
@@ -148,7 +305,11 @@ export default function Home() {
           onPress={() => router.push('/profile')}
           style={styles.headerButton}
         >
-          <Image source={profileIcon} contentFit="contain" style={styles.headerIcon} />
+          <Image
+            source={profileIcon}
+            contentFit="contain"
+            style={styles.headerIcon}
+          />
         </Pressable>
       ),
     });
@@ -157,40 +318,86 @@ export default function Home() {
   return (
     <View style={styles.fill}>
       <FlatList
-        key={columns} // React Native needs a new key whenever numColumns changes
+        key={columns}
         numColumns={columns}
         data={visible}
         keyExtractor={post => post.id}
         renderItem={({ item }) => (
           <View style={columns > 1 ? styles.cell3 : styles.cell1}>
-            <PostCard post={item} name={names[item.author_id] ?? 'Unknown user'} />
+            <PostCard
+              post={item}
+              name={names[item.author_id] ?? 'Unknown user'}
+            />
           </View>
         )}
         refreshing={refreshing}
-        onRefresh={() => { setRefreshing(true); load(); }}
-        contentContainerStyle={[styles.list, columns > 1 && styles.listWide]}
+        onRefresh={() => {
+          setRefreshing(true);
+          void load();
+        }}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={[
+          styles.list,
+          columns > 1 && styles.listWide,
+        ]}
         ListHeaderComponent={
           status !== 'ready' || posts.length === 0 ? null : (
             <View>
-              <FilterRow options={typeOptions} selected={typeFilter} onSelect={setTypeFilter} />
-              <FilterRow options={categories} selected={category} onSelect={setCategory} />
+              <FilterRow
+                options={typeOptions}
+                selected={typeFilter}
+                onSelect={setTypeFilter}
+              />
+              <FilterRow
+                options={categories}
+                selected={category}
+                onSelect={setCategory}
+              />
             </View>
           )
         }
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator
+              accessibilityLabel="Loading more posts"
+              style={styles.footerLoader}
+            />
+          ) : null
+        }
         ListEmptyComponent={
-          status === 'loading' ? <ActivityIndicator accessibilityLabel="Loading posts" style={styles.state} />
-          : status === 'signedout' ? (
+          status === 'loading' ? (
+            <ActivityIndicator
+              accessibilityLabel="Loading posts"
+              style={styles.state}
+            />
+          ) : status === 'signedout' ? (
             <View style={styles.state}>
-              <Text style={styles.empty}>Sign in with your @uwaterloo.ca account to see posts.</Text>
-              <Button label="Go to sign in" onPress={() => router.replace('/login')} />
+              <Text style={styles.empty}>
+                Sign in with your @uwaterloo.ca account to see posts.
+              </Text>
+              <Button
+                label="Go to sign in"
+                onPress={() => router.replace('/login')}
+              />
             </View>
           ) : status === 'error' ? (
             <View style={styles.state}>
               <Text style={styles.empty}>{message}</Text>
-              <Button label="Try again" variant="secondary" onPress={() => { setStatus('loading'); load(); }} />
+              <Button
+                label="Try again"
+                variant="secondary"
+                onPress={() => {
+                  void load();
+                }}
+              />
             </View>
           ) : (
-            <Text style={styles.empty}>{posts.length === 0 ? 'No posts from other students yet.' : 'No posts match these filters yet.'}</Text>
+            <Text style={styles.empty}>
+              {posts.length === 0
+                ? 'No posts from other students yet.'
+                : 'No posts match these filters yet.'}
+            </Text>
           )
         }
       />
@@ -199,7 +406,10 @@ export default function Home() {
         accessibilityRole="button"
         accessibilityLabel="New post"
         onPress={() => router.push('/post/new')}
-        style={({ pressed }) => [styles.fab, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [
+          styles.fab,
+          pressed && { opacity: 0.8 },
+        ]}
       >
         <Text style={styles.fabPlus}>+</Text>
       </Pressable>
@@ -208,27 +418,47 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: theme.colors.background },
+  fill: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   list: {
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
     width: '100%',
     maxWidth: theme.dimensions.contentMaxWidth,
     alignSelf: 'center',
-    paddingBottom: 96, // room for the new post button
+    paddingBottom: 96,
   },
-  // Wide screens: three cards per row. Cells carry the horizontal gap, so the list padding is reduced to match.
-  listWide: { maxWidth: 1200, paddingHorizontal: theme.spacing.lg - theme.spacing.sm },
-  cell1: { flexBasis: '100%', maxWidth: '100%' },
-  cell3: { flexBasis: '33.3333%', maxWidth: '33.3333%', paddingHorizontal: theme.spacing.sm },
+  // Wide screens: three cards per row.
+  listWide: {
+    maxWidth: 1200,
+    paddingHorizontal: theme.spacing.lg - theme.spacing.sm,
+  },
+  cell1: {
+    flexBasis: '100%',
+    maxWidth: '100%',
+  },
+  cell3: {
+    flexBasis: '33.3333%',
+    maxWidth: '33.3333%',
+    paddingHorizontal: theme.spacing.sm,
+  },
   headerButton: {
     minWidth: theme.dimensions.touchTarget,
     minHeight: theme.dimensions.touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIcon: { width: 24, height: 24, tintColor: theme.colors.text },
-  filters: { gap: theme.spacing.sm, paddingBottom: theme.spacing.sm },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    tintColor: theme.colors.text,
+  },
+  filters: {
+    gap: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+  },
   filter: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -237,24 +467,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
   },
-  filterActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
-  filterText: { ...theme.typography.label },
-  card: { gap: theme.spacing.sm, flexGrow: 1 }, // flexGrow makes cards in the same row equal height
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
-  cardWho: { flex: 1 },
-  name: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text },
-  meta: { ...theme.typography.caption, color: theme.colors.muted },
+  filterActive: {
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
+  },
+  filterText: {
+    ...theme.typography.label,
+  },
+  card: {
+    gap: theme.spacing.sm,
+    flexGrow: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  cardWho: {
+    flex: 1,
+  },
+  name: {
+    ...theme.typography.body,
+    fontFamily: theme.typography.semibold,
+    color: theme.colors.text,
+  },
+  meta: {
+    ...theme.typography.caption,
+    color: theme.colors.muted,
+  },
   typeChip: {
     borderRadius: theme.radius.full,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
   },
-  requestChip: { backgroundColor: theme.colors.secondary },
-  offerChip: { backgroundColor: theme.colors.primary },
-  typeChipText: { ...theme.typography.label, color: theme.colors.text },
-  postTitle: { ...theme.typography.heading, color: theme.colors.text },
-  postBody: { ...theme.typography.body, color: theme.colors.body },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  requestChip: {
+    backgroundColor: theme.colors.secondary,
+  },
+  offerChip: {
+    backgroundColor: theme.colors.primary,
+  },
+  typeChipText: {
+    ...theme.typography.label,
+    color: theme.colors.text,
+  },
+  postTitle: {
+    ...theme.typography.heading,
+    color: theme.colors.text,
+  },
+  postBody: {
+    ...theme.typography.body,
+    color: theme.colors.body,
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
   tag: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -262,9 +530,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
   },
-  tagText: { ...theme.typography.caption, color: theme.colors.body },
-  state: { gap: theme.spacing.lg, paddingVertical: theme.spacing.xxxl },
-  empty: { ...theme.typography.body, color: theme.colors.muted, textAlign: 'center', paddingVertical: theme.spacing.xxxl },
+  tagText: {
+    ...theme.typography.caption,
+    color: theme.colors.body,
+  },
+  state: {
+    gap: theme.spacing.lg,
+    paddingVertical: theme.spacing.xxxl,
+  },
+  empty: {
+    ...theme.typography.body,
+    color: theme.colors.muted,
+    textAlign: 'center',
+    paddingVertical: theme.spacing.xxxl,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+  },
   fab: {
     position: 'absolute',
     right: theme.spacing.xl,
@@ -276,5 +558,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fabPlus: { fontSize: 30, lineHeight: 34, color: theme.colors.surface },
+  fabPlus: {
+    fontSize: 30,
+    lineHeight: 34,
+    color: theme.colors.surface,
+  },
 });
