@@ -54,10 +54,10 @@ export default function RootLayout() {
     {/* Signed-in users only: anyone else is sent back to the start, which leads to login */}
     <Stack.Protected guard={!!session}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="post/[id]" options={{ title: 'Post Details' }} />
-      <Stack.Screen name="post/new" options={{ title: 'New Post' }} />
-      <Stack.Screen name="chat/[id]" options={{ title: 'Chat' }} />
-      <Stack.Screen name="user/[id]" options={{ title: 'Public Profile' }} />
+      <Stack.Screen name="post/[id]" options={{ title: 'Post Details', headerBackTitle: 'Home' }} />
+      <Stack.Screen name="post/new" options={{ title: 'New Post', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="chat/[id]" options={{ title: 'Chat', headerBackTitle: 'Messages' }} />
+      <Stack.Screen name="user/[id]" options={{ title: 'Public Profile', headerBackTitle: 'Back' }} />
     </Stack.Protected>
   </Stack></SafeAreaProvider>;
 }
