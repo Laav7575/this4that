@@ -13,12 +13,15 @@ import {
 } from 'react-native';
 import { Button } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
+import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { theme } from '../../constants/theme';
+import { DEMO, DEMO_USER_ID } from '../../lib/demo';
 import { getSupabase } from '../../lib/supabase';
 import { getPosts, getProfile } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
 const profileIcon = require('../../assets/icons/profile.svg');
+const messagesIcon = require('../../assets/icons/messages.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
@@ -90,6 +93,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [myId, setMyId] = useState<string>();
 
   // Refs avoid rerendering and restarting the focus effect for every page.
   const nextOffset = useRef(0);
@@ -113,7 +117,9 @@ export default function Home() {
     try {
       // The database only returns data to a signed-in,
       // confirmed @uwaterloo.ca account.
-      const { data, error } = await getSupabase().auth.getSession();
+      const { data, error } = DEMO
+        ? { data: { session: { user: { id: DEMO_USER_ID } } }, error: null }
+        : await getSupabase().auth.getSession();
 
       if (error) throw error;
 
@@ -126,6 +132,7 @@ export default function Home() {
       }
 
       const myId = data.session.user.id;
+      setMyId(myId);
       const offset = nextOffset.current;
 
       // Fetch one page of posts from Supabase.
@@ -235,6 +242,19 @@ export default function Home() {
       title: 'This4That',
       headerTitleAlign: 'center',
       headerRight: () => (
+        <View style={styles.headerActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Messages"
+          onPress={() => router.push('/messages')}
+          style={styles.headerButton}
+        >
+          <Image
+            source={messagesIcon}
+            contentFit="contain"
+            style={styles.headerIcon}
+          />
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="My profile"
@@ -247,6 +267,7 @@ export default function Home() {
             style={styles.headerIcon}
           />
         </Pressable>
+        </View>
       ),
     });
   }, [navigation]);
@@ -263,6 +284,9 @@ export default function Home() {
             <PostCard
               post={item}
               name={names[item.author_id] ?? 'Unknown user'}
+              footer={myId ? (
+                <MessageAuthorButton compact authorId={item.author_id} postId={item.id} userId={myId} />
+              ) : null}
             />
           </View>
         )}
@@ -379,6 +403,10 @@ const styles = StyleSheet.create({
     flexBasis: '33.3333%',
     maxWidth: '33.3333%',
     paddingHorizontal: theme.spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerButton: {
     minWidth: theme.dimensions.touchTarget,

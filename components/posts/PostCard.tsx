@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, Card } from '../ui';
@@ -12,7 +13,7 @@ function timeAgo(iso: string) {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-export function PostCard({ post, name }: { post: PostRow; name: string }) {
+export function PostCard({ post, name, footer }: { post: PostRow; name: string; footer?: ReactNode }) {
   const isOffer = post.type === 'Offer';
 
   return (
@@ -37,6 +38,7 @@ export function PostCard({ post, name }: { post: PostRow; name: string }) {
         <View style={styles.tag}><Text style={styles.tagText}>{post.category}</Text></View>
         <View style={styles.tag}><Text style={styles.tagText}>{post.availability}</Text></View>
       </View>
+      {footer}
     </Card>
   );
 }
