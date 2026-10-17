@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
+import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
 import { getPost, getProfile } from '../../services/backend';
@@ -118,7 +119,7 @@ export default function PostDetails() {
         </Pressable>
       </View>
 
-      {/* TODO: Add a contact action when the messaging flow is implemented. */}
+      <MessageAuthorButton key={post.id} authorId={post.author_id} postId={post.id} />
     </Screen>
   );
 }
