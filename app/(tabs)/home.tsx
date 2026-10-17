@@ -11,33 +11,23 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Avatar, Button, Card } from '../../components/ui';
+import { Button } from '../../components/ui';
+import { PostCard } from '../../components/posts/PostCard';
+import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { theme } from '../../constants/theme';
+import { DEMO, DEMO_USER_ID } from '../../lib/demo';
 import { getSupabase } from '../../lib/supabase';
 import { getPosts, getProfile } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
 const profileIcon = require('../../assets/icons/profile.svg');
+const messagesIcon = require('../../assets/icons/messages.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
 
 // expo-device reports the kind of device: PHONE, TABLET, DESKTOP, and so on.
 const isPhone = Device.deviceType === Device.DeviceType.PHONE;
-
-function timeAgo(iso: string) {
-  const minutes = Math.max(
-    0,
-    Math.round((Date.now() - new Date(iso).getTime()) / 60000),
-  );
-
-  if (minutes < 60) return `${Math.max(minutes, 1)}m ago`;
-
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  return `${Math.round(hours / 24)}d ago`;
-}
 
 const typeOptions = [
   { value: 'All', label: 'All' },
@@ -90,57 +80,6 @@ function FilterRow({
   );
 }
 
-function PostCard({ post, name }: { post: PostRow; name: string }) {
-  const isOffer = post.type === 'Offer';
-
-  return (
-    <Card
-      accessibilityLabel={`${name} is ${isOffer ? 'offering' : 'requesting'}: ${post.title}`}
-      onPress={() =>
-        router.push({
-          pathname: '/post/[id]',
-          params: { id: post.id },
-        })
-      }
-      style={styles.card}
-    >
-      <View style={styles.cardHeader}>
-        <Avatar name={name} />
-
-        <View style={styles.cardWho}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.meta}>
-            {post.location} · {timeAgo(post.created_at)}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.typeChip,
-            isOffer ? styles.offerChip : styles.requestChip,
-          ]}
-        >
-          <Text style={styles.typeChipText}>
-            {isOffer ? 'Offering' : 'Requesting'}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.postTitle}>{post.title}</Text>
-      <Text style={styles.postBody}>{post.description}</Text>
-
-      <View style={styles.tags}>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{post.category}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{post.availability}</Text>
-        </View>
-      </View>
-    </Card>
-  );
-}
-
 export default function Home() {
   const navigation = useNavigation();
   const columns = isPhone ? 1 : 3;
@@ -154,6 +93,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [myId, setMyId] = useState<string>();
 
   // Refs avoid rerendering and restarting the focus effect for every page.
   const nextOffset = useRef(0);
@@ -177,7 +117,9 @@ export default function Home() {
     try {
       // The database only returns data to a signed-in,
       // confirmed @uwaterloo.ca account.
-      const { data, error } = await getSupabase().auth.getSession();
+      const { data, error } = DEMO
+        ? { data: { session: { user: { id: DEMO_USER_ID } } }, error: null }
+        : await getSupabase().auth.getSession();
 
       if (error) throw error;
 
@@ -190,6 +132,7 @@ export default function Home() {
       }
 
       const myId = data.session.user.id;
+      setMyId(myId);
       const offset = nextOffset.current;
 
       // Fetch one page of posts from Supabase.
@@ -299,6 +242,19 @@ export default function Home() {
       title: 'This4That',
       headerTitleAlign: 'center',
       headerRight: () => (
+        <View style={styles.headerActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Messages"
+          onPress={() => router.push('/messages')}
+          style={styles.headerButton}
+        >
+          <Image
+            source={messagesIcon}
+            contentFit="contain"
+            style={styles.headerIcon}
+          />
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="My profile"
@@ -311,6 +267,7 @@ export default function Home() {
             style={styles.headerIcon}
           />
         </Pressable>
+        </View>
       ),
     });
   }, [navigation]);
@@ -327,6 +284,9 @@ export default function Home() {
             <PostCard
               post={item}
               name={names[item.author_id] ?? 'Unknown user'}
+              footer={myId ? (
+                <MessageAuthorButton compact authorId={item.author_id} postId={item.id} userId={myId} />
+              ) : null}
             />
           </View>
         )}
@@ -444,6 +404,10 @@ const styles = StyleSheet.create({
     maxWidth: '33.3333%',
     paddingHorizontal: theme.spacing.sm,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerButton: {
     minWidth: theme.dimensions.touchTarget,
     minHeight: theme.dimensions.touchTarget,
@@ -473,66 +437,6 @@ const styles = StyleSheet.create({
   },
   filterText: {
     ...theme.typography.label,
-  },
-  card: {
-    gap: theme.spacing.sm,
-    flexGrow: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  cardWho: {
-    flex: 1,
-  },
-  name: {
-    ...theme.typography.body,
-    fontFamily: theme.typography.semibold,
-    color: theme.colors.text,
-  },
-  meta: {
-    ...theme.typography.caption,
-    color: theme.colors.muted,
-  },
-  typeChip: {
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-  },
-  requestChip: {
-    backgroundColor: theme.colors.secondary,
-  },
-  offerChip: {
-    backgroundColor: theme.colors.primary,
-  },
-  typeChipText: {
-    ...theme.typography.label,
-    color: theme.colors.text,
-  },
-  postTitle: {
-    ...theme.typography.heading,
-    color: theme.colors.text,
-  },
-  postBody: {
-    ...theme.typography.body,
-    color: theme.colors.body,
-  },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  tag: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-  },
-  tagText: {
-    ...theme.typography.caption,
-    color: theme.colors.body,
   },
   state: {
     gap: theme.spacing.lg,

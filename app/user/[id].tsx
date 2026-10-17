@@ -10,7 +10,8 @@ import { createConversation } from '../../services/backend';
 import { getMyUserId } from '../../services/profileData';
 
 export default function PublicProfile() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const { state, reload } = useProfile(id);
   const [myId, setMyId] = useState<string | null>(null);
   const [messaging, setMessaging] = useState(false);
