@@ -1,5 +1,5 @@
 /** Migration-aligned types. Regenerate from Supabase after deployment; do not confuse these with mock IDs. */
-export type ProfileRow = { id: string; name: string; program: string; bio: string; avatar: string | null; skills: string[] }
+export type ProfileRow = { id: string; name: string; program: string; location: string; bio: string; avatar: string | null; skills: string[] }
 export type PostRow = { id: string; author_id: string; title: string; description: string; category: string; type: 'Offer' | 'Request'; availability: string; location: string; created_at: string }
 export type ConversationRow = { id: string; related_post_id: string | null; created_at: string }
 export type ParticipantRow = { conversation_id: string; user_id: string }

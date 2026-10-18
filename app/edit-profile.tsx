@@ -15,6 +15,7 @@ export default function EditProfile() {
   const [exists, setExists] = useState(false);
   const [name, setName] = useState('');
   const [program, setProgram] = useState('');
+  const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
   const [skills, setSkills] = useState('');
   const [saving, setSaving] = useState(false);
@@ -33,6 +34,7 @@ export default function EditProfile() {
         setExists(!!profile);
         setName(profile?.name ?? me.name ?? '');
         setProgram(profile?.program ?? '');
+        setLocation(profile?.location ?? '');
         setBio(profile?.bio ?? '');
         setSkills((profile?.skills ?? []).join(', '));
       } catch (e) {
@@ -59,6 +61,7 @@ export default function EditProfile() {
     const input = {
       name: name.trim(),
       program: program.trim(),
+      location: location.trim(),
       bio: bio.trim(),
       skills: parseSkills(skills),
     };
@@ -96,6 +99,13 @@ export default function EditProfile() {
         value={program}
         onChangeText={setProgram}
         placeholder="e.g. Mathematics"
+      />
+      <Input
+        label="Location"
+        value={location}
+        onChangeText={setLocation}
+        placeholder="e.g. Uptown Waterloo"
+        maxLength={100}
       />
       <Input
         label="Bio"
