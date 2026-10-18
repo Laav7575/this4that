@@ -8,6 +8,7 @@ create function auth.uid() returns uuid language sql stable as $$ select nullif(
 grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated;`);
 await db.exec(await readFile('supabase/migrations/202610120001_backend.sql','utf8'));
 await db.exec(await readFile('supabase/migrations/202610180001_post_search.sql','utf8'));
+await db.exec(await readFile('supabase/migrations/202610180002_location_search.sql','utf8'));
 const seed=await readFile('supabase/seeds/development.sql','utf8');
 await assert.rejects(db.exec(seed));
 await db.exec('rollback');

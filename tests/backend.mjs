@@ -16,6 +16,7 @@ await db.exec(`
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backend.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_search.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202610180002_location_search.sql', import.meta.url), 'utf8'));
 const a = '00000000-0000-0000-0000-000000000001';
 const b = '00000000-0000-0000-0000-000000000002';
 const outsider = '00000000-0000-0000-0000-000000000003';
@@ -44,6 +45,10 @@ await asUser(b, async () => {
   const matches = await db.query(`select id from posts
     where search_document @@ websearch_to_tsquery('english', $1)`, ['calculus library']);
   assert.deepEqual(matches.rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from posts
+    where location_search_document @@ websearch_to_tsquery('english', $1)`, ['library'])).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from posts
+    where created_at >= now() - interval '1 day' and type = 'Offer' and category = 'Tutoring'`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query('select * from get_post_categories()')).rows, [{ category: 'Tutoring' }]);
 });
 await asUser(b, async () => {

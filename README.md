@@ -24,8 +24,8 @@ iOS requires macOS/Xcode for the simulator; Android requires Android Studio and 
 
 - `app/_layout.tsx`: root Stack and bundled Inter fonts.
 - `app/index.tsx`: redirects to Login; Login can continue to Home with no real authentication.
-- `app/(tabs)/_layout.tsx`: Home, Search, Messages, My Profile bottom tabs.
-- Routes: `/login`, `/home`, `/search`, `/messages`, `/profile`, `/post/new`, `/post/:id`, `/chat/:id`, `/user/:id`.
+- `app/(tabs)/_layout.tsx`: Home, Messages, and My Profile bottom tabs. Search and filters are available from Home; `/search` redirects to `/home`.
+- Routes: `/login`, `/home`, `/search` (redirect), `/messages`, `/profile`, `/post/new`, `/post/:id`, `/chat/:id`, `/user/:id`.
 - `components/ui`: Button (primary/secondary, disabled/loading), Input (controlled values, labels, errors, TextInput props), Card (optional press), Avatar (image or initials, failed-image fallback).
 - `components/Screen.tsx`: safe areas, scroll/keyboard support, horizontal padding, desktop maximum width.
 - `constants/theme.ts`: centralized Figma values; provenance and deliberate conventions in `docs/design.md`.

@@ -47,12 +47,14 @@ export async function updateMyProfile(input: Partial<ProfileInput>) {
   if (error) throw error;
   return data;
 }
-export async function getPosts({ offset = 0, limit = 20, category, type, search }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string } = {}) {
-  if (DEMO) return demo.getPosts({ offset, limit, category, type, search });
+export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string } = {}) {
+  if (DEMO) return demo.getPosts({ offset, limit, category, type, search, location, createdAfter });
   let query = getSupabase().from('posts').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
   if (category) query = query.eq('category', category);
   if (type) query = query.eq('type', type);
   if (search?.trim()) query = query.textSearch('search_document', search.trim(), { type: 'websearch', config: 'english' });
+  if (location?.trim()) query = query.textSearch('location_search_document', location.trim(), { type: 'websearch', config: 'english' });
+  if (createdAfter) query = query.gte('created_at', createdAfter);
   const { data, error } = await query.range(...page(offset, limit));
   if (error) throw error;
   return data;

@@ -13,11 +13,10 @@ export function HeaderIcon({ icon, label, onPress }: { icon: keyof typeof header
 }
 const tabs = [
   { path: '/home', label: 'Home', icon: require('../../assets/icons/home.svg') },
-  { path: '/search', label: 'Search', icon: require('../../assets/icons/search.svg') },
   { path: '/messages', label: 'Messages', icon: require('../../assets/icons/messages.svg') },
   { path: '/profile', label: 'My Profile', icon: require('../../assets/icons/profile.svg') },
 ] as const;
-/** Keep the app's four-tab convention available on the stack-based chat route. */
+/** Keep the app's primary navigation available on the stack-based chat route. */
 export function ChatNavigation() {
   return <View style={styles.tabs}>{tabs.map(tab => <Pressable key={tab.path} accessibilityRole="button"
     accessibilityLabel={tab.label} accessibilityState={{ selected: tab.path === '/messages' }}
