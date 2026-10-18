@@ -25,32 +25,62 @@ export default function EditProfile() {
     (async () => {
       try {
         const me = await getMyAuthInfo();
-        if (!me.id) { router.replace('/login'); return; }
+        if (!me.id) {
+          router.replace('/login');
+          return;
+        }
         const profile = await getProfile(me.id);
         setExists(!!profile);
         setName(profile?.name ?? me.name ?? '');
-        setProgram(profile?.program ?? ''); setBio(profile?.bio ?? ''); setSkills((profile?.skills ?? []).join(', '));
-      } catch (e) { setError(e instanceof Error ? e.message : 'Could not load your profile.'); }
-      finally { setLoading(false); }
+        setProgram(profile?.program ?? '');
+        setBio(profile?.bio ?? '');
+        setSkills((profile?.skills ?? []).join(', '));
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : 'Could not load your profile.',
+        );
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
   const save = async () => {
     const problems: typeof fieldError = {};
     if (!name.trim()) problems.name = 'Name is required.';
-    else if (name.trim().length > 100) problems.name = 'Name must be 100 characters or fewer.';
-    if (bio.length > 2000) problems.bio = 'Bio must be 2000 characters or fewer.';
+    else if (name.trim().length > 100)
+      problems.name = 'Name must be 100 characters or fewer.';
+    if (bio.length > 2000)
+      problems.bio = 'Bio must be 2000 characters or fewer.';
     setFieldError(problems);
     if (problems.name || problems.bio) return;
-    setSaving(true); setError(undefined);
-    const input = { name: name.trim(), program: program.trim(), bio: bio.trim(), skills: parseSkills(skills) };
+    setSaving(true);
+    setError(undefined);
+    const input = {
+      name: name.trim(),
+      program: program.trim(),
+      bio: bio.trim(),
+      skills: parseSkills(skills),
+    };
     try {
-      if (exists) await updateMyProfile(input); else await createMyProfile(input);
+      if (exists) await updateMyProfile(input);
+      else await createMyProfile(input);
       router.back();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save. Try again.'); setSaving(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save. Try again.');
+      setSaving(false);
+    }
   };
 
-  if (loading) return <Screen><ActivityIndicator accessibilityLabel="Loading" style={{ marginTop: theme.spacing.xxxl }} /></Screen>;
+  if (loading)
+    return (
+      <Screen>
+        <ActivityIndicator
+          accessibilityLabel="Loading"
+          style={{ marginTop: theme.spacing.xxxl }}
+        />
+      </Screen>
+    );
   return (
     <Screen>
       <Input
