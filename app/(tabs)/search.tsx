@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
 import { theme } from '../../constants/theme';
-import { getPosts, getProfile } from '../../services/backend';
+import { getPostCategories, getPosts, getProfiles } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
 const PAGE_SIZE = 50;
@@ -16,8 +16,10 @@ export default function Search() {
 	const [posts, setPosts] = useState<PostRow[]>([]);
 	const [names, setNames] = useState<Record<string, string>>({});
 	const [query, setQuery] = useState('');
+	const [debouncedQuery, setDebouncedQuery] = useState('');
+	const [categories, setCategories] = useState<string[]>([]);
 	const [category, setCategory] = useState('All');
-	const [type, setType] = useState('All');
+	const [type, setType] = useState<'All' | PostRow['type']>('All');
 	const [status, setStatus] = useState<Status>('loading');
 	const [error, setError] = useState('');
 	const [refreshing, setRefreshing] = useState(false);
@@ -25,29 +27,53 @@ export default function Search() {
 	const [hasMore, setHasMore] = useState(true);
 	const nextOffset = useRef(0);
 	const loadingRef = useRef(false);
+	const requestId = useRef(0);
+
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedQuery(query), 300);
+		return () => clearTimeout(timer);
+	}, [query]);
+
+	const loadCategories = useCallback(async () => {
+		try {
+			setCategories(await getPostCategories());
+		} catch (cause) {
+			setError(cause instanceof Error ? cause.message : 'Could not load post categories.');
+		}
+	}, []);
 
 	const load = useCallback(async (reset = true) => {
-		if (loadingRef.current) return;
+		if (!reset && loadingRef.current) return;
+		const currentRequest = reset ? ++requestId.current : requestId.current;
 		loadingRef.current = true;
 		setError('');
 		if (reset) {
 			nextOffset.current = 0;
 			setStatus('loading');
 			setHasMore(true);
+			setPosts([]);
 		} else {
 			setLoadingMore(true);
 		}
 
 		try {
 			const offset = nextOffset.current;
-			const rows = await getPosts({ offset, limit: PAGE_SIZE });
+			const rows = await getPosts({
+				offset,
+				limit: PAGE_SIZE,
+				category: category === 'All' ? undefined : category,
+				type: type === 'All' ? undefined : type as PostRow['type'],
+				search: debouncedQuery.trim() || undefined,
+			});
+			if (currentRequest !== requestId.current) return;
 			const authorIds = Array.from(new Set(rows.map(post => post.author_id)));
-			const profiles = await Promise.all(authorIds.map(id => getProfile(id)));
+			const profiles = await getProfiles(authorIds);
 			const namesById: Record<string, string> = {};
 			profiles.forEach(profile => {
-				if (profile) namesById[profile.id] = profile.name;
+				namesById[profile.id] = profile.name;
 			});
 
+			if (currentRequest !== requestId.current) return;
 			nextOffset.current = offset + rows.length;
 			setHasMore(rows.length === PAGE_SIZE);
 			setPosts(current => {
@@ -58,32 +84,25 @@ export default function Search() {
 			setNames(current => ({ ...current, ...namesById }));
 			setStatus('ready');
 		} catch (cause) {
+			if (currentRequest !== requestId.current) return;
 			const message = cause instanceof Error ? cause.message : 'Could not load posts.';
 			setError(message);
 			if (reset) setStatus('error');
 		} finally {
-			loadingRef.current = false;
-			setLoadingMore(false);
-			setRefreshing(false);
+			if (currentRequest === requestId.current) {
+				loadingRef.current = false;
+				setLoadingMore(false);
+				setRefreshing(false);
+			}
 		}
-	}, []);
+	}, [category, debouncedQuery, type]);
 
 	useFocusEffect(useCallback(() => {
 		void load();
 	}, [load]));
-
-	const categories = useMemo(
-		() => ['All', ...Array.from(new Set(posts.map(post => post.category)))],
-		[posts],
-	);
-	const visible = useMemo(() => {
-		const term = query.trim().toLowerCase();
-		return posts.filter(post =>
-			(type === 'All' || post.type === type) &&
-			(category === 'All' || post.category === category) &&
-			(!term || [post.title, post.description, post.category, post.location].some(value => value.toLowerCase().includes(term))),
-		);
-	}, [category, posts, query, type]);
+	useFocusEffect(useCallback(() => {
+		void loadCategories();
+	}, [loadCategories]));
 
 	const filters = (values: string[], selected: string, onSelect: (value: string) => void, label: string) => (
 		<FlatList
@@ -114,7 +133,7 @@ export default function Search() {
 			<FlatList
 				key={columns}
 				numColumns={columns}
-				data={visible}
+				data={posts}
 				keyExtractor={post => post.id}
 				renderItem={({ item }) => (
 					<View style={[styles.cell, {
@@ -129,15 +148,20 @@ export default function Search() {
 				onRefresh={() => { setRefreshing(true); void load(); }}
 				refreshing={refreshing}
 				onEndReached={() => {
-					if (visible.length > 0 && hasMore && status === 'ready' && !loadingRef.current) void load(false);
+					if (posts.length > 0 && hasMore && status === 'ready' && !loadingRef.current) void load(false);
 				}}
 				onEndReachedThreshold={0.5}
 				ListHeaderComponent={(
 					<View style={styles.header}>
 						<Text accessibilityRole="header" style={styles.heading}>Search posts</Text>
 						<Input label="Search" placeholder="Title, details, category, or location" value={query} onChangeText={setQuery} returnKeyType="search" />
-						{filters(['All', 'Request', 'Offer'], type, setType, 'Filter by post type')}
-						{filters(categories, category, setCategory, 'Filter by category')}
+						{filters(
+							['All', 'Requesting', 'Offering'],
+							type === 'Request' ? 'Requesting' : type === 'Offer' ? 'Offering' : 'All',
+							value => setType(value === 'Requesting' ? 'Request' : value === 'Offering' ? 'Offer' : 'All'),
+							'Filter by post type',
+						)}
+						{filters(['All', ...categories], category, setCategory, 'Filter by category')}
 						{error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 					</View>
 				)}
@@ -150,7 +174,7 @@ export default function Search() {
 					? <ActivityIndicator style={styles.state} accessibilityLabel="Loading posts" />
 					: status === 'error'
 						? <Pressable onPress={() => { void load(); }} style={styles.state}><Text style={styles.empty}>Could not load posts. Tap to retry.</Text></Pressable>
-						: <Text style={styles.empty}>{posts.length ? 'No loaded posts match your search. Load more to search older posts.' : 'No posts are available yet.'}</Text>}
+						: <Text style={styles.empty}>{query.trim() || category !== 'All' || type !== 'All' ? 'No posts match your search.' : 'No posts are available yet.'}</Text>}
 			/>
 		</View>
 	);

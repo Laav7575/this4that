@@ -7,6 +7,7 @@ import { ProfileView } from '../../components/profile/ProfileView';
 import { ProfileStatus } from '../../components/profile/ProfileStatus';
 import { useProfile } from '../../components/profile/useProfile';
 import { theme } from '../../constants/theme';
+import { DEMO } from '../../lib/demo';
 import { signOut } from '../../services/auth';
 import { getMyUserId } from '../../services/profileData';
 
@@ -94,7 +95,7 @@ export default function MyProfile() {
           )}
         </>
       )}
-      {signOutButton}
+      {!DEMO && signOutButton}
     </Screen>
   );
 }

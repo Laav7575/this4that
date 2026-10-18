@@ -15,6 +15,7 @@ await db.exec(`
   grant execute on function auth.uid() to authenticated;
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backend.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_search.sql', import.meta.url), 'utf8'));
 const a = '00000000-0000-0000-0000-000000000001';
 const b = '00000000-0000-0000-0000-000000000002';
 const outsider = '00000000-0000-0000-0000-000000000003';
@@ -38,6 +39,12 @@ const post = await asUser(a, async () => {
   const { rows } = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
     values ($1,'Tutoring','Calculus help','Tutoring','Offer','Weekends','Library') returning id`,[a]);
   return rows[0].id;
+});
+await asUser(b, async () => {
+  const matches = await db.query(`select id from posts
+    where search_document @@ websearch_to_tsquery('english', $1)`, ['calculus library']);
+  assert.deepEqual(matches.rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query('select * from get_post_categories()')).rows, [{ category: 'Tutoring' }]);
 });
 await asUser(b, async () => {
   await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
@@ -67,6 +74,7 @@ await asUser(outsider, async () => {
 });
 await db.exec('set role anon');
 await assert.rejects(db.query('select * from profiles'));
+await assert.rejects(db.query('select * from get_post_categories()'));
 await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));

@@ -32,6 +32,8 @@ npx expo start --clear
 
 `.env` is ignored by Git. EXPO_PUBLIC values are embedded in the client application, so never use a database password, secret key, or service-role key. Database access must be enforced with row-level security.
 
+For local UI review without signing in, set `EXPO_PUBLIC_DEMO_MODE=1` in `.env` and restart Expo with `npx expo start --clear`. Demo mode bypasses the login screen and uses in-memory sample data for profile viewing and editing; changes are lost when the app reloads. Never enable it in a production build.
+
 `lib/supabase.ts` exports `getSupabase()` for feature services. It initializes on first use and fails clearly if configuration is absent. Native sessions use AsyncStorage; web sessions use the SDK's browser storage. Auth URL detection is disabled; confirmation, recovery, and OAuth callbacks must be implemented explicitly when adding real authentication.
 
 When authentication is wired into the root layout, call `manageSupabaseSessionRefresh()` inside a React effect and return its cleanup. Do not call it independently in every screen. Session refresh is not mounted in the mock app yet.
@@ -52,15 +54,16 @@ Sources: https://supabase.com/docs/guides/auth/quickstarts/react-native and http
 
 ## Ready-to-connect APIs
 
-The schema is now in `supabase/migrations/202610120001_backend.sql`. The app still imports `data/mockData.ts`; it does not make backend calls. Development fixtures have been inserted manually; these do not change the screens' data source. Mock IDs such as `maya` are not backend UUIDs and cannot be passed to live APIs.
+The base schema is in `supabase/migrations/202610120001_backend.sql`; Search uses the backend post APIs when Supabase mode is enabled. Apply `supabase/migrations/202610180001_post_search.sql` after the base schema to add indexed full-text search, category/type feed indexes, and the category-list RPC. Mock IDs such as `maya` are not backend UUIDs and cannot be passed to live APIs.
 
 To deploy to the development project:
 
 1. In the Supabase dashboard, confirm you are in `this4that-dev` (project ref `hnjhweyekaobzhnztyzt`).
 2. Open SQL Editor → New query.
 3. Paste the entire migration file and run it once. It is transactional and designed for an empty project, not to overwrite existing tables.
-4. Confirm Table Editor contains profiles, posts, conversations, conversation_participants, and messages with RLS enabled.
-5. Keep email confirmation enabled. All data access requires an Auth email ending exactly in `@uwaterloo.ca` and a nonnull confirmation timestamp. Other users may exist in Auth, but cannot access app data. A Before User Created hook to reject other domains at registration is not yet deployed.
+4. After the base migration is applied, run the post-search migration once in a new SQL Editor query.
+5. Confirm Table Editor contains profiles, posts, conversations, conversation_participants, and messages with RLS enabled.
+6. Keep email confirmation enabled. All data access requires an Auth email ending exactly in `@uwaterloo.ca` and a nonnull confirmation timestamp. Other users may exist in Auth, but cannot access app data. A Before User Created hook to reject other domains at registration is not yet deployed.
 
 Do not put database admin credentials in this repository or Expo environment. The publishable key cannot run migrations. For future CLI-based deployment, use Supabase CLI login/link and `db push`, tracking applied migrations. If this first migration is applied manually through SQL Editor, reconcile CLI migration history before a later db push to avoid attempting to recreate the tables.
 
@@ -71,9 +74,11 @@ Import functions directly from `services/backend.ts` when your feature is ready 
 | Feature | Functions |
 | --- | --- |
 | Profile | getProfile, createMyProfile, updateMyProfile |
-| Posts/Search | getPosts, getPost, createPost, updatePost, deletePost |
+| Posts/Search | getPosts, getPost, getPostCategories, getProfiles, createPost, updatePost, deletePost |
 | Messaging | createConversation, getConversations, getParticipants, getMessages, sendMessage |
 | Authentication (`services/auth.ts`) | signUp, signIn, signOut |
+
+`getPosts` applies keyword, category, and type filters in Supabase before paging results. Keyword search uses the generated English full-text document and its GIN index; category and type filters have feed-ordering indexes. Search input is debounced in the UI, and result author profiles are loaded in one batch.
 
 No feature automatically switches to backend mode when `.env` is present. Keep mocks until real auth and feature UI are ready. Use a deliberate screen/service import change when connecting a feature.
 
