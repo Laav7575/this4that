@@ -63,6 +63,7 @@ export default function RootLayout() {
       <Stack.Screen name="post/new" options={{ title: 'New Post', headerBackTitle: 'Back' }} />
       <Stack.Screen name="chat/[id]" options={{ title: 'Chat', headerBackTitle: 'Messages' }} />
       <Stack.Screen name="user/[id]" options={{ title: 'Public Profile', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="edit-profile" options={{ title: 'Edit Profile', headerBackTitle: 'Back' }} />
     </Stack.Protected>
   </Stack></SafeAreaProvider>;
 }

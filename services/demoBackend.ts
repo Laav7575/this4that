@@ -7,10 +7,10 @@ let seq = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
 const profiles: ProfileRow[] = [
-  { id: DEMO_USER_ID, name: 'Alex Kim', program: 'Arts', bio: 'Demo account.', avatar: null, skills: ['Moving', 'Baking'] },
-  { id: 'maya', name: 'Maya Chen', program: 'Mathematics', bio: 'Happy to trade calculus help for practical favours.', avatar: null, skills: ['Calculus', 'Meal prep'] },
-  { id: 'jordan', name: 'Jordan Patel', program: 'Computer Science', bio: 'Python enthusiast and weekend cyclist.', avatar: null, skills: ['Python', 'Technology support'] },
-  { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'] },
+  { id: DEMO_USER_ID, name: 'Alex Kim', program: 'Arts', location: 'Uptown Waterloo', bio: 'Demo account.', avatar: null, skills: ['Moving', 'Baking'] },
+  { id: 'maya', name: 'Maya Chen', program: 'Mathematics', location: 'Uptown Waterloo', bio: 'Happy to trade calculus help for practical favours.', avatar: null, skills: ['Calculus', 'Meal prep'] },
+  { id: 'jordan', name: 'Jordan Patel', program: 'Computer Science', location: '', bio: 'Python enthusiast and weekend cyclist.', avatar: null, skills: ['Python', 'Technology support'] },
+  { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', location: '', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'] },
 ];
 const posts: PostRow[] = [
   { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Tutoring', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
