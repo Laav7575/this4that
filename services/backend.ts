@@ -22,6 +22,19 @@ export async function getProfile(id: string) {
   if (error) throw error;
   return data; // Public profile excludes email and user-editable verification flags.
 }
+export async function getProfiles(ids: string[]) {
+  if (ids.length === 0) return [];
+  if (DEMO) return demo.getProfiles(ids);
+  const { data, error } = await getSupabase().from('profiles').select('*').in('id', ids);
+  if (error) throw error;
+  return data;
+}
+export async function getPostCategories() {
+  if (DEMO) return demo.getPostCategories();
+  const { data, error } = await getSupabase().rpc('get_post_categories');
+  if (error) throw error;
+  return data.map(row => row.category);
+}
 export async function createMyProfile(input: ProfileInput) {
   const { data, error } = await getSupabase().from('profiles').insert({ ...input, id: await userId() }).select().single();
   if (error) throw error;
@@ -32,11 +45,12 @@ export async function updateMyProfile(input: Partial<ProfileInput>) {
   if (error) throw error;
   return data;
 }
-export async function getPosts({ offset = 0, limit = 20, category, type }: { offset?: number; limit?: number; category?: string; type?: PostInput['type'] } = {}) {
-  if (DEMO) return demo.getPosts({ offset, limit, category, type });
+export async function getPosts({ offset = 0, limit = 20, category, type, search }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string } = {}) {
+  if (DEMO) return demo.getPosts({ offset, limit, category, type, search });
   let query = getSupabase().from('posts').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
   if (category) query = query.eq('category', category);
   if (type) query = query.eq('type', type);
+  if (search?.trim()) query = query.textSearch('search_document', search.trim(), { type: 'websearch', config: 'english' });
   const { data, error } = await query.range(...page(offset, limit));
   if (error) throw error;
   return data;

@@ -40,8 +40,12 @@ const newestFirst = (a: { timestamp: string; id: string }, b: { timestamp: strin
   b.timestamp.localeCompare(a.timestamp) || b.id.localeCompare(a.id);
 
 export async function getProfile(id: string) { return profiles.find(p => p.id === id) ?? null; }
-export async function getPosts({ offset = 0, limit = 20, category, type }: { offset?: number; limit?: number; category?: string; type?: PostInput['type'] } = {}) {
+export async function getProfiles(ids: string[]) { return profiles.filter(profile => ids.includes(profile.id)); }
+export async function getPostCategories() { return Array.from(new Set(posts.map(post => post.category))).sort((a, b) => a.localeCompare(b)); }
+export async function getPosts({ offset = 0, limit = 20, category, type, search }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string } = {}) {
+  const terms = search?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean) ?? [];
   return posts.filter(p => (!category || p.category === category) && (!type || p.type === type))
+    .filter(p => terms.every(term => [p.title, p.description, p.category, p.location].some(value => value.toLocaleLowerCase().includes(term))))
     .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(offset, offset + limit);
 }
 export async function getPost(id: string) { return posts.find(p => p.id === id) ?? null; }
