@@ -20,6 +20,18 @@ export interface Database {
     Functions: {
       create_conversation: { Args: { other_user_id: string; post_id?: string }; Returns: string };
       get_post_categories: { Args: Record<PropertyKey, never>; Returns: { category: string }[] };
+      search_posts: {
+        Args: {
+          p_offset: number;
+          p_limit: number;
+          p_category: string | null;
+          p_type: string | null;
+          p_search: string | null;
+          p_location: string | null;
+          p_created_after: string | null;
+        };
+        Returns: PostRow[];
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

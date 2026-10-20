@@ -263,8 +263,15 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getPostCategories()
-        .then(values => {
+      const loadCategories = async () => {
+        try {
+          if (!DEMO) {
+            const { data, error } = await getSupabase().auth.getSession();
+            if (error) throw error;
+            if (!data.session) return;
+          }
+
+          const values = await getPostCategories();
           if (active) {
             setCategoryOptions([
               { value: 'All', label: 'All categories' },
@@ -272,10 +279,11 @@ export default function Home() {
             ]);
             setCategoryError('');
           }
-        })
-        .catch(error => {
+        } catch (error) {
           if (active) setCategoryError(error instanceof Error ? error.message : 'Could not load post categories.');
-        });
+        }
+      };
+      void loadCategories();
       return () => { active = false; };
     }, []),
   );

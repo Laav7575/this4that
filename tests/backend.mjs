@@ -1,8 +1,9 @@
 import { PGlite } from '@electric-sql/pglite';
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const db = new PGlite();
+const db = new PGlite({ extensions: { pg_trgm } });
 // Minimal Supabase Auth/roles fixture. PGlite runs actual PostgreSQL policies, not JS simulations.
 await db.exec(`
   create role anon; create role authenticated;
@@ -17,6 +18,7 @@ await db.exec(`
 await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backend.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610180002_location_search.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202610200001_partial_post_search.sql', import.meta.url), 'utf8'));
 const a = '00000000-0000-0000-0000-000000000001';
 const b = '00000000-0000-0000-0000-000000000002';
 const outsider = '00000000-0000-0000-0000-000000000003';
@@ -41,14 +43,36 @@ const post = await asUser(a, async () => {
     values ($1,'Tutoring','Calculus help','Tutoring','Offer','Weekends','Library') returning id`,[a]);
   return rows[0].id;
 });
+const olderPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location,created_at)
+  values ($1,'Old tutoring post','Older listing','Tutoring','Offer','Weekends','Davis Centre Library',now() - interval '8 days')
+  returning id`,[a])).rows[0].id;
+const wildcardPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
+  values ($1,'100% match','Literal wildcard sample','Tutoring','Offer','Weekends','Library') returning id`,[a])).rows[0].id;
 await asUser(b, async () => {
   const matches = await db.query(`select id from posts
     where search_document @@ websearch_to_tsquery('english', $1)`, ['calculus library']);
   assert.deepEqual(matches.rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query(`select id from posts
-    where location_search_document @@ websearch_to_tsquery('english', $1)`, ['library'])).rows.map(row => row.id), [post]);
+    where location_search_document @@ websearch_to_tsquery('english', $1)
+    order by title`, ['library'])).rows.map(row => row.id), [wildcardPost, olderPost, post]);
   assert.deepEqual((await db.query(`select id from posts
-    where created_at >= now() - interval '1 day' and type = 'Offer' and category = 'Tutoring'`)).rows.map(row => row.id), [post]);
+    where location_search_document @@ websearch_to_tsquery('english', $1)`, ['Davis Centre'])).rows.map(row => row.id), [olderPost]);
+  assert.deepEqual((await db.query(`select id from posts
+    where location_search_document @@ websearch_to_tsquery('english', $1)`, ['calculus'])).rows, []);
+  assert.deepEqual((await db.query(`select id from posts
+    where created_at >= now() - interval '1 day' and type = 'Offer' and category = 'Tutoring'
+      and title != '100% match'`)).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from posts
+    where created_at >= now() - interval '7 days' and type = 'Offer' and category = 'Tutoring'
+      and title != '100% match'`)).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from posts
+    where created_at >= now() - interval '30 days' and type = 'Offer' and category = 'Tutoring'
+      and title != '100% match' order by created_at desc`)).rows.map(row => row.id), [post, olderPost]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, 'culu', null, null)`)).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, null, 'vis Centre', null)`)).rows.map(row => row.id), [olderPost]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, '%', null, null)`)).rows.map(row => row.id), [wildcardPost]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, 'Tutoring', 'Offer', 'culu', null, now() - interval '1 day')`)).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, 'culu', null, now() - interval '1 day')`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query('select * from get_post_categories()')).rows, [{ category: 'Tutoring' }]);
 });
 await asUser(b, async () => {
