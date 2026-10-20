@@ -22,23 +22,54 @@ export async function getProfile(id: string) {
   if (error) throw error;
   return data; // Public profile excludes email and user-editable verification flags.
 }
+export async function getProfiles(ids: string[]) {
+  if (ids.length === 0) return [];
+  if (DEMO) return demo.getProfiles(ids);
+  const { data, error } = await getSupabase().from('profiles').select('*').in('id', ids);
+  if (error) throw error;
+  return data;
+}
+export async function getPostCategories() {
+  if (DEMO) return demo.getPostCategories();
+  const { data, error } = await getSupabase().rpc('get_post_categories');
+  if (error) {
+    if (error.code === 'PGRST202') {
+      throw new Error('Post categories are unavailable because the post-search migration has not been applied. Apply 202610180001_post_search.sql to your Supabase project.');
+    }
+    throw error;
+  }
+  return data.map(row => row.category);
+}
 export async function createMyProfile(input: ProfileInput) {
+  if (DEMO) return demo.createMyProfile(input);
   const { data, error } = await getSupabase().from('profiles').insert({ ...input, id: await userId() }).select().single();
   if (error) throw error;
   return data;
 }
 export async function updateMyProfile(input: Partial<ProfileInput>) {
+  if (DEMO) return demo.updateMyProfile(input);
   const { data, error } = await getSupabase().from('profiles').update(input).eq('id', await userId()).select().single();
   if (error) throw error;
   return data;
 }
-export async function getPosts({ offset = 0, limit = 20, category, type }: { offset?: number; limit?: number; category?: string; type?: PostInput['type'] } = {}) {
-  if (DEMO) return demo.getPosts({ offset, limit, category, type });
-  let query = getSupabase().from('posts').select('*').order('created_at', { ascending: false }).order('id', { ascending: false });
-  if (category) query = query.eq('category', category);
-  if (type) query = query.eq('type', type);
-  const { data, error } = await query.range(...page(offset, limit));
-  if (error) throw error;
+export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string } = {}) {
+  if (DEMO) return demo.getPosts({ offset, limit, category, type, search, location, createdAfter });
+  const [from, to] = page(offset, limit);
+  const { data, error } = await getSupabase().rpc('search_posts', {
+    p_offset: from,
+    p_limit: to - from + 1,
+    p_category: category ?? null,
+    p_type: type ?? null,
+    p_search: search?.trim() || null,
+    p_location: location?.trim() || null,
+    p_created_after: createdAfter ?? null,
+  });
+  if (error) {
+    if (error.code === 'PGRST202') {
+      throw new Error('Post search is unavailable because the partial-search migration has not been applied. Apply 202610200001_partial_post_search.sql to your Supabase project.');
+    }
+    throw error;
+  }
   return data;
 }
 export async function getPost(id: string) {

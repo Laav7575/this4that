@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { DEMO } from '../../lib/demo';
 import { getMockProfileStats } from '../../data/mockProfileStats';
 import {
   isUuid,
@@ -22,7 +23,7 @@ export type ProfileState =
 export function useProfile(id: string | undefined) {
   const [state, setState] = useState<ProfileState>({ status: 'loading' });
   const load = useCallback(async () => {
-    if (!isUuid(id)) {
+    if (!id || (!DEMO && !isUuid(id))) {
       setState({ status: 'notfound' });
       return;
     }

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text } from 'react-native';
 import { theme } from '../../constants/theme';
 const icons = {
-  home: require('../../assets/icons/home.svg'), search: require('../../assets/icons/search.svg'),
+  home: require('../../assets/icons/home.svg'),
   messages: require('../../assets/icons/messages.svg'), profile: require('../../assets/icons/profile.svg'),
 };
 export default function TabLayout() {
@@ -21,5 +21,6 @@ export default function TabLayout() {
       tabBarIcon: ({ focused }) => <Image source={icons[name]} contentFit="contain" style={{ width: 24, height: 24,
         tintColor: focused ? theme.colors.secondary : theme.colors.text }} />,
     }} />)}
+    <Tabs.Screen name="search" options={{ href: null }} />
   </Tabs>;
 }

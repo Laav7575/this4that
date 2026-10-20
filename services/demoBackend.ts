@@ -1,16 +1,16 @@
 /** In-memory stand-in for services/backend.ts, used only when DEMO is on (see lib/demo.ts). */
 import { DEMO_USER_ID } from '../lib/demo';
-import type { ConversationRow, MessageRow, ParticipantRow, PostInput, PostRow, ProfileRow } from '../types/database';
+import type { ConversationRow, MessageRow, ParticipantRow, PostInput, PostRow, ProfileInput, ProfileRow } from '../types/database';
 
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60000).toISOString();
 let seq = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
 const profiles: ProfileRow[] = [
-  { id: DEMO_USER_ID, name: 'Alex Kim', program: 'Arts', location: 'Uptown Waterloo', bio: 'Demo account.', avatar: null, skills: ['Moving', 'Baking'] },
-  { id: 'maya', name: 'Maya Chen', program: 'Mathematics', location: 'Uptown Waterloo', bio: 'Happy to trade calculus help for practical favours.', avatar: null, skills: ['Calculus', 'Meal prep'] },
-  { id: 'jordan', name: 'Jordan Patel', program: 'Computer Science', location: '', bio: 'Python enthusiast and weekend cyclist.', avatar: null, skills: ['Python', 'Technology support'] },
-  { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', location: '', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'] },
+  { id: DEMO_USER_ID, name: 'Alex Kim', program: 'Arts', location: 'Uptown Waterloo', bio: 'Demo account.', avatar: null, skills: ['Moving', 'Baking'], created_at: '2025-09-01T00:00:00.000Z' },
+  { id: 'maya', name: 'Maya Chen', program: 'Mathematics', location: 'Uptown Waterloo', bio: 'Happy to trade calculus help for practical favours.', avatar: null, skills: ['Calculus', 'Meal prep'], created_at: '2024-09-01T00:00:00.000Z' },
+  { id: 'jordan', name: 'Jordan Patel', program: 'Computer Science', location: '', bio: 'Python enthusiast and weekend cyclist.', avatar: null, skills: ['Python', 'Technology support'], created_at: '2025-01-15T00:00:00.000Z' },
+  { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', location: '', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'], created_at: '2024-09-01T00:00:00.000Z' },
 ];
 const posts: PostRow[] = [
   { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Tutoring', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
@@ -40,8 +40,42 @@ const newestFirst = (a: { timestamp: string; id: string }, b: { timestamp: strin
   b.timestamp.localeCompare(a.timestamp) || b.id.localeCompare(a.id);
 
 export async function getProfile(id: string) { return profiles.find(p => p.id === id) ?? null; }
-export async function getPosts({ offset = 0, limit = 20, category, type }: { offset?: number; limit?: number; category?: string; type?: PostInput['type'] } = {}) {
+export async function getProfiles(ids: string[]) { return profiles.filter(profile => ids.includes(profile.id)); }
+export async function getPostCategories() { return Array.from(new Set(posts.map(post => post.category))).sort((a, b) => a.localeCompare(b)); }
+export async function getPostsByAuthor(authorId: string, limit = 20) {
+  return posts.filter(post => post.author_id === authorId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))
+    .slice(0, limit);
+}
+export async function createMyProfile(input: ProfileInput) {
+  if (profiles.some(profile => profile.id === DEMO_USER_ID)) {
+    throw new Error('The demo profile already exists.');
+  }
+  const profile: ProfileRow = {
+    id: DEMO_USER_ID,
+    name: input.name,
+    program: input.program ?? '',
+    location: input.location ?? '',
+    bio: input.bio ?? '',
+    avatar: input.avatar ?? null,
+    skills: input.skills ?? [],
+    created_at: new Date().toISOString(),
+  };
+  profiles.push(profile);
+  return profile;
+}
+export async function updateMyProfile(input: Partial<ProfileInput>) {
+  const profile = profiles.find(item => item.id === DEMO_USER_ID);
+  if (!profile) throw new Error('The demo profile has not been created.');
+  Object.assign(profile, input);
+  return profile;
+}
+export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string } = {}) {
+  const terms = search?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean) ?? [];
   return posts.filter(p => (!category || p.category === category) && (!type || p.type === type))
+    .filter(p => terms.every(term => [p.title, p.description, p.category, p.location].some(value => value.toLocaleLowerCase().includes(term))))
+    .filter(p => !location?.trim() || p.location.toLocaleLowerCase().includes(location.trim().toLocaleLowerCase()))
+    .filter(p => !createdAfter || p.created_at >= createdAfter)
     .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(offset, offset + limit);
 }
 export async function getPost(id: string) { return posts.find(p => p.id === id) ?? null; }
