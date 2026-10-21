@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { router, useFocusEffect, Tabs } from 'expo-router';
 import { AppState, View } from 'react-native';
 import { InboxView } from '../../components/messaging/InboxView';
+import { AddPostButton } from '../../components/navigation/PrimaryNavigation';
 import { HeaderIcon } from '../../components/messaging/Navigation';
 import { theme } from '../../constants/theme';
 import { loadInbox, messagingUser, type InboxItem } from '../../services/messaging';
@@ -40,7 +41,7 @@ export default function Messages() {
   return <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
     <Tabs.Screen options={{ title: 'Messages', headerTitle: '',
       headerLeft: () => <HeaderIcon icon="settings" label="My profile and settings" onPress={() => router.push('/profile')} />,
-      headerRight: () => <HeaderIcon icon="add" label="Create a post" onPress={() => router.push('/post/new')} /> }} />
+      headerRight: () => <AddPostButton /> }} />
     <InboxView items={items} userId={userId} loading={loading} error={error} onRefresh={() => setRefresh(n => n + 1)}
       onOpen={id => router.push({ pathname: '/chat/[id]', params: { id } })} onExplore={() => router.push('/home')} />
   </View>;
