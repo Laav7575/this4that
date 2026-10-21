@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   composer: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 56, padding: 5,
     borderRadius: 8, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   add: { width: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  input: { ...theme.typography.body, fontSize: 13, flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, color: theme.colors.text, paddingVertical: 10 },
+  input: { ...theme.typography.body, fontSize: 13, flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, color: theme.colors.text, paddingHorizontal: 12, paddingVertical: 10 },
   send: { width: 44, height: 44, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
   sendText: { fontFamily: theme.typography.semibold, fontSize: 24, color: theme.colors.text }, disabled: { opacity: 0.45 },
   counter: { ...theme.typography.caption, color: theme.colors.muted, textAlign: 'right', paddingTop: 4 },

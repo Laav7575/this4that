@@ -81,7 +81,7 @@ Backend DTOs in `types/database.ts` use database snake_case and UUIDs; the found
 
 Mutations derive owner/sender IDs from Auth. Profile updates cannot alter identity. Post updates cannot alter ownership or creation timestamps. Message history is newest first. List functions have bounded offset pagination (1–100 records); stable secondary IDs resolve timestamp ties, but new records can shift offsets. There is no advanced text search yet; category/type filters are available.
 
-Create your own profile after signing in, then posts. Conversations use an atomic RPC for two participants; a related post must belong to one participant. Calling it repeatedly creates separate conversations. No client can directly change membership. Last-message summaries are not stored; the Messages developer can use message queries. Realtime subscriptions, attachments/storage, account deletion, and password recovery/OAuth callbacks are future additions.
+Create your own profile after signing in, then posts. Conversations use an atomic RPC for two participants; a related post must belong to one participant. After applying `202610200001_one_conversation_per_pair.sql`, calling it repeatedly reuses the same conversation for the two students, regardless of the related post. No client can directly change membership. Last-message summaries are not stored; the Messages developer can use message queries. Realtime subscriptions, attachments/storage, account deletion, and password recovery/OAuth callbacks are future additions.
 
 ### Backend validation
 
@@ -114,3 +114,11 @@ Use your own confirmed Waterloo Auth account for real API tests. Dashboard organ
 Supabase tasks before feature integration: verify authenticated access with ordinary user sessions; configure custom SMTP before general signup email testing; implement confirmation/deep-link callbacks and session routing in the Login feature. Configure redirect URLs for the chosen auth flows. Realtime publication/subscriptions and Storage buckets/policies are needed only when those features are implemented. No further table creation or reseeding is required for this development project. Do not rerun the schema migration. Reconcile manually applied migration history before adopting CLI deployment.
 
 The seed maps A/Maya and B/Jordan to the moving conversation; C/Aisha can read only the pets conversation with A. Test with normal signed-in clients, not SQL Editor's postgres role. Hosted permission verification is not yet claimed complete.
+
+## Messaging fix: one conversation per student pair
+
+Apply `supabase/migrations/202610200001_one_conversation_per_pair.sql` to the existing development database before using this messaging update. Paste the whole file into the development project's SQL Editor and run it; do not rerun the original schema migration.
+
+This transaction combines duplicate two-person conversations into the oldest conversation, preserving every message's ID, content, sender and timestamp. It retains that conversation's original post context. The RPC then reuses that conversation across posts and serializes simultaneous requests for the same pair. The app no longer makes a post-specific lookup. Existing links to removed duplicate conversations must be reopened from the refreshed inbox; device-local unread indicators may reappear after merging.
+
+`npm run test:backend` covers merging existing histories, reuse across different posts and in both directions, separate student pairs, and access controls. Applying the migration to the hosted database is a separate deployment step.

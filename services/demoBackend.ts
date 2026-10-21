@@ -56,11 +56,12 @@ export async function getConversations(offset = 0, limit = 20) {
     .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(offset, offset + limit);
 }
 export async function getParticipants(conversationId: string) { return participants.filter(p => p.conversation_id === conversationId); }
-export async function findConversation(otherUserId: string, postId?: string) {
-  return conversations.find(c => (c.related_post_id ?? undefined) === postId
-    && participants.some(p => p.conversation_id === c.id && p.user_id === otherUserId))?.id;
+export async function findConversation(otherUserId: string) {
+  return conversations.find(c => participants.some(p => p.conversation_id === c.id && p.user_id === otherUserId))?.id;
 }
 export async function createConversation(otherUserId: string, postId?: string) {
+  const existing = conversations.find(c => participants.some(p => p.conversation_id === c.id && p.user_id === otherUserId));
+  if (existing) return existing.id;
   const id = newId('chat');
   conversations.push({ id, related_post_id: postId ?? null, created_at: new Date().toISOString() });
   participants.push({ conversation_id: id, user_id: DEMO_USER_ID }, { conversation_id: id, user_id: otherUserId });

@@ -58,7 +58,29 @@ await asUser(a, async () => {
   await assert.rejects(db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'Spoof\')',[conversation,b]));
   await assert.rejects(db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'  \')',[conversation,a]));
 });
-await asUser(b, async () => assert.equal((await db.query('select * from messages')).rows.length,1));
+// Reproduce legacy duplicates, then migrate without dropping either history.
+const duplicate = await asUser(b, async () => (await db.query('select create_conversation($1) as id',[a])).rows[0].id);
+await asUser(b, async () => db.query("insert into messages(conversation_id,sender_id,content) values ($1,$2,'Second thread')",[duplicate,b]));
+const beforeMerge = (await db.query('select id, sender_id, content, timestamp from messages order by id')).rows;
+await db.exec(await readFile(new URL('../supabase/migrations/202610200001_one_conversation_per_pair.sql', import.meta.url), 'utf8'));
+const canonical = (await db.query('select id from conversations')).rows[0].id;
+assert.equal((await db.query('select * from conversations')).rows.length,1);
+assert.deepEqual((await db.query('select id, sender_id, content, timestamp from messages order by id')).rows,beforeMerge);
+assert.equal((await db.query('select * from conversation_participants')).rows.length,2);
+const secondPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
+  values ($1,'Moving','Help moving','Moving','Request','Saturday','Campus') returning id`,[b])).rows[0].id;
+for (const [caller, other] of [[a,b],[b,a]]) await asUser(caller, async () => {
+  for (const context of [post,secondPost,null]) {
+    assert.equal((await db.query('select create_conversation($1,$2) as id',[other,context])).rows[0].id,canonical);
+  }
+  assert.equal((await db.query('select * from messages')).rows.length,2);
+  await assert.rejects(db.query('select create_conversation($1)',[caller]));
+});
+assert.equal((await db.query('select * from conversations')).rows.length,1);
+// A different pair still gets a separate conversation.
+const separate = await asUser(a, async () => (await db.query('select create_conversation($1) as id',[outsider])).rows[0].id);
+assert.notEqual(separate,canonical);
+await db.query('delete from conversations where id=$1',[separate]);
 await asUser(outsider, async () => {
   for (const table of ['messages','conversations','conversation_participants']) assert.equal((await db.query(`select * from ${table}`)).rows.length,0);
   await assert.rejects(db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'Intrusion\')',[conversation,outsider]));
@@ -71,4 +93,4 @@ await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));
 await db.close();
-console.log('PASS: migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, and private email separation.');
+console.log('PASS: duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, and private email separation.');
