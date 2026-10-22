@@ -15,14 +15,14 @@ import {
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
+import { AddPostButton } from '../../components/navigation/PrimaryNavigation';
 import { theme } from '../../constants/theme';
 import { DEMO, DEMO_USER_ID } from '../../lib/demo';
 import { getSupabase } from '../../lib/supabase';
 import { getPostCategories, getPosts, getProfiles } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
-const profileIcon = require('../../assets/icons/profile.svg');
-const messagesIcon = require('../../assets/icons/messages.svg');
+
 const searchIcon = require('../../assets/icons/search.svg');
 const PAGE_SIZE = 50;
 
@@ -288,7 +288,7 @@ export default function Home() {
     }, []),
   );
 
-  // Keep search, messages, and profile actions together in the Home header.
+  // Keep search alongside the shared Add Post header action.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
@@ -316,30 +316,7 @@ export default function Home() {
               style={styles.headerIcon}
             />
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Messages"
-            onPress={() => router.push('/messages')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={messagesIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="My profile"
-            onPress={() => router.push('/profile')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={profileIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
+          <AddPostButton />
         </View>
       ),
     });
@@ -490,17 +467,7 @@ export default function Home() {
         }
       />
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="New post"
-        onPress={() => router.push('/post/new')}
-        style={({ pressed }) => [
-          styles.fab,
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <Text style={styles.fabPlus}>+</Text>
-      </Pressable>
+
     </View>
   );
 }
@@ -661,20 +628,5 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: 20,
   },
-  fab: {
-    position: 'absolute',
-    right: theme.spacing.xl,
-    bottom: theme.spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabPlus: {
-    fontSize: 30,
-    lineHeight: 34,
-    color: theme.colors.surface,
-  },
+
 });

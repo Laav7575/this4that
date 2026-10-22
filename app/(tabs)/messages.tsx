@@ -40,7 +40,7 @@ export default function Messages() {
   return <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
     <Tabs.Screen options={{ title: 'Messages', headerTitle: '',
       headerLeft: () => <HeaderIcon icon="settings" label="My profile and settings" onPress={() => router.push('/profile')} />,
-      headerRight: () => <HeaderIcon icon="add" label="Create a post" onPress={() => router.push('/post/new')} /> }} />
+      headerRight: () => null }} />
     <InboxView items={items} userId={userId} loading={loading} error={error} onRefresh={() => setRefresh(n => n + 1)}
       onOpen={id => router.push({ pathname: '/chat/[id]', params: { id } })} onExplore={() => router.push('/home')} />
   </View>;
