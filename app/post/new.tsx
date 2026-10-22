@@ -10,6 +10,7 @@ import type { PostInput, PostRow } from '../../types/database';
 const categories = ['Tutoring', 'Technology', 'Errands', 'Moving', 'Pets', 'Handy help', 'Other'];
 
 type Fields = Omit<PostInput, 'type'>;
+const POST_TITLE_MAX_LENGTH = 80;
 
 const initialFields: Fields = {
 	title: '',
@@ -28,7 +29,7 @@ export default function NewPost() {
 	const [createdPost, setCreatedPost] = useState<PostRow>();
 
 	const validation = {
-		title: !fields.title.trim() ? 'Enter a title.' : fields.title.trim().length > 200 ? 'Use 200 characters or fewer.' : undefined,
+		title: !fields.title.trim() ? 'Enter a title.' : fields.title.trim().length > POST_TITLE_MAX_LENGTH ? `Use ${POST_TITLE_MAX_LENGTH} characters or fewer.` : undefined,
 		description: !fields.description.trim() ? 'Enter a description.' : fields.description.trim().length > 500 ? 'Use 500 characters or fewer.' : undefined,
 		category: !fields.category.trim() || fields.category === 'Other' ? 'Select or enter a category.' : undefined,
 		availability: !fields.availability.trim() ? 'Add when you are available.' : undefined,
@@ -137,7 +138,7 @@ export default function NewPost() {
 				placeholder={type === 'Offer' ? 'What can you help with?' : 'What do you need help with?'}
 				value={fields.title}
 				onChangeText={value => update('title', value)}
-				maxLength={200}
+				maxLength={POST_TITLE_MAX_LENGTH}
 				error={submitted ? validation.title : undefined}
 			/>
 			<Input
