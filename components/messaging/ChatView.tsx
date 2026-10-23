@@ -9,10 +9,10 @@ import { messageDay } from '../../services/messaging';
 import type { MessageRow, PostRow, ProfileRow } from '../../types/database';
 
 export function ChatView({ person, post, messages, userId, draft, onDraft, onSend, sending, error,
-  onProfile, onPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
+  onProfile, onPost, onOpenPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
   person: ProfileRow | null; post: PostRow | null; messages: MessageRow[]; userId: string;
   draft: string; onDraft: (value: string) => void; onSend: () => void; sending: boolean; error: string;
-  onProfile: () => void; onPost: () => void; onRefresh: () => void;
+  onProfile: () => void; onPost: () => void; onOpenPost: (postId: string) => void; onRefresh: () => void;
   hasOlder: boolean; loadingOlder: boolean; onOlder: () => void;
 }) {
   const scroll = useRef<ScrollView>(null);
@@ -48,7 +48,7 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
       {messages.map((message, index) => <View key={message.id} style={styles.messageGroup}>
         {(index === 0 || messageDay(messages[index - 1].timestamp) !== messageDay(message.timestamp)) &&
           <Text style={styles.day}>{messageDay(message.timestamp).toUpperCase()}</Text>}
-        <MessageBubble message={message} sent={message.sender_id === userId} />
+        <MessageBubble message={message} sent={message.sender_id === userId} onOpenPost={onOpenPost} />
       </View>)}
     </ScrollView>
     {!!error && <View style={styles.errorRow}><Text accessibilityRole="alert" style={styles.error}>{error}</Text></View>}
