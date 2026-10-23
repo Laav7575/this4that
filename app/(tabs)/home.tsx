@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { Button, Input } from '../../components/ui';
@@ -100,7 +101,7 @@ export default function Home() {
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryOptions, setCategoryOptions] = useState([{ value: 'All', label: 'All categories' }]);
   const [categoryError, setCategoryError] = useState('');
-  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -288,34 +289,13 @@ export default function Home() {
     }, []),
   );
 
-  // Keep search, messages, and profile actions together in the Home header.
+  // Keep messaging and profile actions in the Home header.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
       headerTitleAlign: 'center',
       headerRight: () => (
         <View style={styles.headerActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={searchExpanded ? 'Close search' : 'Search posts'}
-            accessibilityState={{ expanded: searchExpanded }}
-            onPress={() => {
-              if (searchExpanded) {
-                setQuery('');
-                setLocation('');
-                setDateFilter('any');
-                setDateOptionsOpen(false);
-              }
-              setSearchExpanded(open => !open);
-            }}
-            style={styles.headerButton}
-          >
-            <Image
-              source={searchIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Messages"
@@ -343,7 +323,7 @@ export default function Home() {
         </View>
       ),
     });
-  }, [navigation, searchExpanded]);
+  }, [navigation]);
 
   return (
     <View style={styles.fill}>
@@ -377,7 +357,31 @@ export default function Home() {
         ]}
         ListHeaderComponent={
           <View style={styles.listHeader}>
-            <Text style={styles.filterHeading}>FILTERS</Text>
+            <View style={styles.filterTopRow}>
+              <Text style={styles.filterHeading}>FILTERS</Text>
+              <View style={styles.searchField}>
+                <Image source={searchIcon} contentFit="contain" style={styles.searchFieldIcon} />
+                <TextInput
+                  placeholder="Search posts"
+                  accessibilityLabel="Search posts"
+                  value={query}
+                  onChangeText={setQuery}
+                  returnKeyType="search"
+                  placeholderTextColor={theme.colors.muted}
+                  style={styles.searchInput}
+                />
+                {query ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear search"
+                    onPress={() => setQuery('')}
+                    style={styles.clearSearch}
+                  >
+                    <Text style={styles.clearSearchText}>×</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
             <FilterRow
               options={typeOptions}
               selected={typeFilter}
@@ -389,15 +393,22 @@ export default function Home() {
               onSelect={setCategory}
             />
             {categoryError ? <Text style={styles.filterError}>{categoryError}</Text> : null}
-            {searchExpanded ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={advancedFiltersExpanded ? 'Hide additional filters' : 'Show additional filters'}
+              accessibilityState={{ expanded: advancedFiltersExpanded }}
+              onPress={() => setAdvancedFiltersExpanded(open => !open)}
+              style={styles.moreFiltersButton}
+            >
+              <Text style={styles.moreFiltersText}>
+                {advancedFiltersExpanded ? 'Fewer filters' : `More filters${location.trim() || dateFilter !== 'any' ? ' · active' : ''}`}
+              </Text>
+              <Text style={styles.moreFiltersIcon} accessibilityElementsHidden importantForAccessibility="no">
+                {advancedFiltersExpanded ? '−' : '+'}
+              </Text>
+            </Pressable>
+            {advancedFiltersExpanded ? (
               <View style={styles.searchPanel}>
-                <Input
-                  placeholder="Search keywords"
-                  accessibilityLabel="Search keywords"
-                  value={query}
-                  onChangeText={setQuery}
-                  returnKeyType="search"
-                />
                 <Input
                   label="Location"
                   placeholder="Any location"
@@ -546,6 +557,68 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     tintColor: theme.colors.text,
+  },
+  filterTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  searchField: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: theme.dimensions.touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+  },
+  searchFieldIcon: {
+    width: 18,
+    height: 18,
+    tintColor: theme.colors.muted,
+  },
+  searchInput: {
+    ...theme.typography.body,
+    flex: 1,
+    minWidth: 0,
+    minHeight: theme.dimensions.touchTarget - 2,
+    padding: 0,
+    color: theme.colors.text,
+  },
+  clearSearch: {
+    width: theme.dimensions.touchTarget,
+    height: theme.dimensions.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearSearchText: {
+    color: theme.colors.muted,
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  moreFiltersButton: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.subtle,
+  },
+  moreFiltersText: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+  },
+  moreFiltersIcon: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 18,
   },
   filters: {
     gap: theme.spacing.sm,
