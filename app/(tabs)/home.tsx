@@ -1,8 +1,6 @@
-
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import * as Device from 'expo-device';
-import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,8 +18,6 @@ import { getSupabase } from '../../lib/supabase';
 import { getPosts, getProfile } from '../../services/backend';
 import type { PostRow } from '../../types/database';
 
-const profileIcon = require('../../assets/icons/profile.svg');
-const messagesIcon = require('../../assets/icons/messages.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
@@ -241,34 +237,7 @@ export default function Home() {
     navigation.setOptions({
       title: 'This4That',
       headerTitleAlign: 'center',
-      headerRight: () => (
-        <View style={styles.headerActions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Messages"
-          onPress={() => router.push('/messages')}
-          style={styles.headerButton}
-        >
-          <Image
-            source={messagesIcon}
-            contentFit="contain"
-            style={styles.headerIcon}
-          />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="My profile"
-          onPress={() => router.push('/profile')}
-          style={styles.headerButton}
-        >
-          <Image
-            source={profileIcon}
-            contentFit="contain"
-            style={styles.headerIcon}
-          />
-        </Pressable>
-        </View>
-      ),
+      headerRight: () => null,
     });
   }, [navigation]);
 
@@ -403,21 +372,6 @@ const styles = StyleSheet.create({
     flexBasis: '33.3333%',
     maxWidth: '33.3333%',
     paddingHorizontal: theme.spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerButton: {
-    minWidth: theme.dimensions.touchTarget,
-    minHeight: theme.dimensions.touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    tintColor: theme.colors.text,
   },
   filters: {
     gap: theme.spacing.sm,
