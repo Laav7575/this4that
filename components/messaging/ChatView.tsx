@@ -9,10 +9,10 @@ import { messageDay } from '../../services/messaging';
 import type { MessageRow, PostRow, ProfileRow } from '../../types/database';
 
 export function ChatView({ person, post, messages, userId, draft, onDraft, onSend, sending, error,
-  onProfile, onPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
+  onProfile, onPost, onOpenPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
   person: ProfileRow | null; post: PostRow | null; messages: MessageRow[]; userId: string;
   draft: string; onDraft: (value: string) => void; onSend: () => void; sending: boolean; error: string;
-  onProfile: () => void; onPost: () => void; onRefresh: () => void;
+  onProfile: () => void; onPost: () => void; onOpenPost: (postId: string) => void; onRefresh: () => void;
   hasOlder: boolean; loadingOlder: boolean; onOlder: () => void;
 }) {
   const scroll = useRef<ScrollView>(null);
@@ -28,7 +28,7 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
         <View style={styles.personCopy}><Text numberOfLines={1} style={styles.name}>{person?.name ?? 'Student'}</Text>
           <Text style={styles.caption}>{person ? 'UW student · View profile' : 'Profile unavailable'}</Text></View>
       </Pressable>
-      <HeaderIcon icon="more" label="Conversation options" onPress={() => setMenu('options')} />
+      <HeaderIcon icon="more" label="Conversation options" onPress={() => setMenu('options')} style={styles.optionsButton} />
     </View>
     {!!post && <Pressable accessibilityRole="button" accessibilityLabel={`View exchange: ${post.title}`} onPress={onPost} style={styles.context}>
       <Text style={styles.eyebrow}>ABOUT THIS EXCHANGE</Text>
@@ -48,14 +48,14 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
       {messages.map((message, index) => <View key={message.id} style={styles.messageGroup}>
         {(index === 0 || messageDay(messages[index - 1].timestamp) !== messageDay(message.timestamp)) &&
           <Text style={styles.day}>{messageDay(message.timestamp).toUpperCase()}</Text>}
-        <MessageBubble message={message} sent={message.sender_id === userId} />
+        <MessageBubble message={message} sent={message.sender_id === userId} onOpenPost={onOpenPost} />
       </View>)}
     </ScrollView>
     {!!error && <View style={styles.errorRow}><Text accessibilityRole="alert" style={styles.error}>{error}</Text></View>}
     <View style={styles.composerOuter}>
       <View style={styles.composer}>
         <Pressable accessibilityRole="button" accessibilityLabel="Message suggestions" onPress={() => setMenu('suggestions')} style={styles.add}>
-          <Image source={require('../../assets/icons/messaging/add.svg')} style={{ width: 20, height: 20 }} contentFit="contain" />
+          <Image source={require('../../assets/icons/messaging/add.svg')} style={{ width: 24, height: 24 }} contentFit="contain" />
         </Pressable>
         <TextInput multiline value={draft} onChangeText={onDraft} editable={!sending} maxLength={5000}
           placeholder="Write a message…" placeholderTextColor={theme.colors.muted} accessibilityLabel="Write a message"
@@ -87,6 +87,8 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', maxWidth: theme.dimensions.contentMaxWidth, alignSelf: 'center', minHeight: 0 },
   personRow: { flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 24, gap: 4 },
+  // Pull the 44px target out so the icon itself lines up with the card and composer edges (16px).
+  optionsButton: { marginHorizontal: 0, marginRight: -10 },
   personLink: { flex: 1, flexDirection: 'row', gap: 12, alignItems: 'center', minWidth: 0 }, personCopy: { flex: 1 },
   name: { fontFamily: theme.typography.semibold, fontSize: 18, lineHeight: 25, color: theme.colors.text },
   caption: { ...theme.typography.caption, color: theme.colors.muted },
@@ -97,10 +99,11 @@ const styles = StyleSheet.create({
   day: { fontFamily: theme.typography.medium, color: theme.colors.muted, fontSize: 10, lineHeight: 14, textAlign: 'center', paddingBottom: 4 },
   empty: { ...theme.typography.body, color: theme.colors.muted, textAlign: 'center', padding: 24 },
   composerOuter: { padding: 16, paddingTop: 8, paddingBottom: 8 },
-  composer: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 56, padding: 5,
+  // flex-end keeps both buttons beside the last line while a long message grows the input.
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, minHeight: 56, padding: 5,
     borderRadius: 8, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
-  add: { width: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  input: { ...theme.typography.body, fontSize: 13, flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, color: theme.colors.text, paddingVertical: 10 },
+  add: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  input: { ...theme.typography.body, fontSize: 13, flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, color: theme.colors.text, paddingHorizontal: 12, paddingVertical: 10 },
   send: { width: 44, height: 44, borderRadius: 8, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
   sendText: { fontFamily: theme.typography.semibold, fontSize: 24, color: theme.colors.text }, disabled: { opacity: 0.45 },
   counter: { ...theme.typography.caption, color: theme.colors.muted, textAlign: 'right', paddingTop: 4 },

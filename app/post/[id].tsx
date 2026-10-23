@@ -9,6 +9,51 @@ import { getPost, getProfile } from '../../services/backend';
 import type { PostRow, ProfileRow } from '../../types/database';
 
 type Status = 'loading' | 'ready' | 'missing' | 'error';
+const DESCRIPTION_PREVIEW_LINES = 4;
+const DESCRIPTION_LINE_HEIGHT = theme.typography.body.lineHeight;
+
+function PostDescription({ description }: { description: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+
+  return (
+    <View style={styles.description}>
+      <Text
+        style={styles.body}
+        numberOfLines={hasMore && !expanded ? DESCRIPTION_PREVIEW_LINES : undefined}
+      >
+        {description}
+      </Text>
+      {hasMore ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          onPress={() => setExpanded(value => !value)}
+          style={styles.descriptionToggle}
+        >
+          <Text style={styles.descriptionToggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
+        </Pressable>
+      ) : null}
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden={true}
+        pointerEvents="none"
+        style={styles.descriptionMeasure}
+      >
+        <Text
+          accessible={false}
+          onLayout={event => {
+            setHasMore(event.nativeEvent.layout.height > DESCRIPTION_LINE_HEIGHT * DESCRIPTION_PREVIEW_LINES);
+          }}
+          style={styles.body}
+        >
+          {description}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 export default function PostDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -92,7 +137,7 @@ export default function PostDetails() {
           <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
         </View>
         <Text accessibilityRole="header" style={styles.title}>{post.title}</Text>
-        <Text style={styles.body}>{post.description}</Text>
+        <PostDescription key={post.id} description={post.description} />
         <View style={styles.tags}>
           <Text style={styles.tag}>{post.category}</Text>
           <Text style={styles.tag}>{post.availability}</Text>
@@ -128,6 +173,10 @@ const styles = StyleSheet.create({
   heading: { ...theme.typography.heading, color: theme.colors.text },
   title: { ...theme.typography.heading, color: theme.colors.text, fontSize: 24, lineHeight: 30 },
   body: { ...theme.typography.body, color: theme.colors.body },
+  description: { position: 'relative' },
+  descriptionMeasure: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0 },
+  descriptionToggle: { alignSelf: 'flex-start', minHeight: theme.dimensions.touchTarget, justifyContent: 'center' },
+  descriptionToggleText: { ...theme.typography.label, color: theme.colors.success },
   topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: theme.spacing.sm },
   badge: { ...theme.typography.label, overflow: 'hidden', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs, borderRadius: theme.radius.full, color: theme.colors.text },
   offerBadge: { backgroundColor: theme.colors.primary },

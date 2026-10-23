@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import { router, useFocusEffect, Tabs } from 'expo-router';
 import { AppState, View } from 'react-native';
 import { InboxView } from '../../components/messaging/InboxView';
-import { HeaderIcon } from '../../components/messaging/Navigation';
 import { theme } from '../../constants/theme';
 import { loadInbox, messagingUser, type InboxItem } from '../../services/messaging';
 
@@ -38,9 +37,8 @@ export default function Messages() {
     return () => { active = false; clearInterval(timer); };
   }, [refresh]));
   return <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-    <Tabs.Screen options={{ title: 'Messages', headerTitle: '',
-      headerLeft: () => <HeaderIcon icon="settings" label="My profile and settings" onPress={() => router.push('/profile')} />,
-      headerRight: () => <HeaderIcon icon="add" label="Create a post" onPress={() => router.push('/post/new')} /> }} />
+    {/* No header shortcuts: Profile is already a tab, and new posts start from Home (SCRUM-31/33). */}
+    <Tabs.Screen options={{ title: 'Messages', headerTitle: '', headerLeft: () => null, headerRight: () => null }} />
     <InboxView items={items} userId={userId} loading={loading} error={error} onRefresh={() => setRefresh(n => n + 1)}
       onOpen={id => router.push({ pathname: '/chat/[id]', params: { id } })} onExplore={() => router.push('/home')} />
   </View>;

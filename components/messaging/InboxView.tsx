@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   subtitle: { ...theme.typography.body, fontSize: 13, lineHeight: 18, color: theme.colors.muted },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 12, borderWidth: 1, borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface, borderRadius: 8, minHeight: 44 }, searchIcon: { width: 18, height: 18 },
-  searchInput: { flex: 1, minWidth: 0, minHeight: 44, ...theme.typography.body, color: theme.colors.text, paddingRight: 12 },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 44, ...theme.typography.body, color: theme.colors.text, paddingHorizontal: 12, paddingVertical: 10 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, clearText: { fontSize: 22, color: theme.colors.muted },
   filters: { flexDirection: 'row', gap: 8 }, filter: { paddingHorizontal: 10, minHeight: 36, justifyContent: 'center',
     borderRadius: theme.radius.full, backgroundColor: theme.colors.surface }, filterText: { ...theme.typography.label, color: theme.colors.text },

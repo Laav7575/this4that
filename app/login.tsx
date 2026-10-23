@@ -49,14 +49,14 @@ export default function Login() {
       if (isForgot) {
         // The emailed link comes back to the reset-password screen (web: this site; Expo Go/app: a deep link).
         await requestPasswordReset(email, Linking.createURL('/reset-password'));
-        setNotice('If an account exists for that email, a reset link is on its way. Check your inbox.');
+        setNotice('If an account exists for that email, a reset link is on its way. Check your inbox and spam or junk.');
       } else if (isSignUp) {
         await signUp(email, password, name.trim());
         // With email confirmation on, there is no session until the link in the email is opened.
         setMode('signin');
         setSubmitted(false);
         setPassword('');
-        setNotice('Check your @uwaterloo.ca inbox to confirm your account, then sign in.');
+        setNotice('Check your inbox and spam or junk to confirm your account, then sign in.');
       } else {
         const { user } = await signIn(email, password);
         // First confirmed sign-in: create the public profile row the feed needs for author names.

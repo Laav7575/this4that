@@ -74,23 +74,7 @@ export async function getEarlierMessages(id: string, before: MessageRow) {
   return data;
 }
 
-/**
- * Opens the existing conversation with this student about this post, or starts one.
- * create_conversation always inserts a new row, so reuse is checked here to avoid duplicate threads.
- * RLS only returns participant rows for conversations the caller is in, so this finds shared threads only.
- */
+/** The database atomically reuses one conversation per pair, regardless of the post. */
 export async function openConversation(otherUserId: string, postId?: string) {
-  if (DEMO) return (await demo.findConversation(otherUserId, postId)) ?? demo.createConversation(otherUserId, postId);
-  const supabase = getSupabase();
-  const { data: shared, error } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', otherUserId);
-  if (error) throw error;
-  const ids = shared.map(row => row.conversation_id);
-  if (ids.length) {
-    let query = supabase.from('conversations').select('id').in('id', ids);
-    query = postId ? query.eq('related_post_id', postId) : query.is('related_post_id', null);
-    const { data: existing, error: lookupError } = await query.order('created_at', { ascending: false }).limit(1);
-    if (lookupError) throw lookupError;
-    if (existing[0]) return existing[0].id;
-  }
   return createConversation(otherUserId, postId);
 }
