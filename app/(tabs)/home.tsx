@@ -16,7 +16,6 @@ import {
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
-import { AddPostButton } from '../../components/navigation/PrimaryNavigation';
 import { theme } from '../../constants/theme';
 import { DEMO, DEMO_USER_ID } from '../../lib/demo';
 import { getSupabase } from '../../lib/supabase';
@@ -25,6 +24,8 @@ import type { PostRow } from '../../types/database';
 
 
 const searchIcon = require('../../assets/icons/search.svg');
+const messagesIcon = require('../../assets/icons/messages.svg');
+const profileIcon = require('../../assets/icons/profile.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
