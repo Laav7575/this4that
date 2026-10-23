@@ -3,7 +3,9 @@ export type ProfileRow = { id: string; name: string; program: string; location: 
 export type PostRow = { id: string; author_id: string; title: string; description: string; category: string; type: 'Offer' | 'Request'; availability: string; location: string; created_at: string; search_document?: string }
 export type ConversationRow = { id: string; related_post_id: string | null; created_at: string }
 export type ParticipantRow = { conversation_id: string; user_id: string }
-export type MessageRow = { id: string; conversation_id: string; sender_id: string; content: string; timestamp: string }
+export type MessageRow = { id: string; conversation_id: string; sender_id: string; content: string; timestamp: string;
+  /** Set on exchange notices: the post this part of the conversation is about. */
+  post_id?: string | null }
 type Table<Row, Insert, Update> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
 export type ProfileInput = Pick<ProfileRow, 'name'> & Partial<Omit<ProfileRow, 'id' | 'name' | 'created_at'>>;
 export type PostInput = Omit<PostRow, 'id' | 'author_id' | 'created_at' | 'search_document'>;

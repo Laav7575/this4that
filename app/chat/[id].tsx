@@ -95,6 +95,7 @@ function Chat({ id }: { id: string }) {
             error={sendError || error} onSend={() => { void send(); }} onRefresh={() => setRevision(n => n + 1)}
             onProfile={() => { if (person) router.push({ pathname: '/user/[id]', params: { id: person.id } }); }}
             onPost={() => { if (post) router.push({ pathname: '/post/[id]', params: { id: post.id } }); }}
+            onOpenPost={postId => router.push({ pathname: '/post/[id]', params: { id: postId } })}
             hasOlder={hasOlder} loadingOlder={loadingOlder} onOlder={() => { void older(); }} />}
     </KeyboardAvoidingView>
     <ChatNavigation />

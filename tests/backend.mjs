@@ -113,6 +113,25 @@ for (const [caller, other] of [[a,b],[b,a]]) await asUser(caller, async () => {
   await assert.rejects(db.query('select create_conversation($1)',[caller]));
 });
 assert.equal((await db.query('select * from conversations')).rows.length,1);
+await db.exec(await readFile(new URL('../supabase/migrations/202610230001_conversation_latest_post.sql', import.meta.url), 'utf8'));
+// Reopening from another post reuses the chat, switches its exchange card and adds one notice naming both posts.
+const notices = async () => (await db.query('select sender_id, content, post_id from messages where post_id is not null order by timestamp, id')).rows;
+const card = async () => (await db.query('select related_post_id from conversations where id=$1',[canonical])).rows[0].related_post_id;
+for (const context of [post,null]) await asUser(a, async () => db.query('select create_conversation($1,$2)',[b,context]));
+assert.equal((await notices()).length,0);
+for (let i = 0; i < 2; i++) await asUser(a, async () =>
+  assert.equal((await db.query('select create_conversation($1,$2) as id',[b,secondPost])).rows[0].id,canonical));
+const original = (await db.query('select title from posts where id=$1',[post])).rows[0].title;
+assert.deepEqual(await notices(),[{ sender_id: a, content: `Now talking about “Moving”\nPreviously: “${original}”`, post_id: secondPost }]);
+assert.equal(await card(),secondPost);
+await asUser(b, async () => db.query('select create_conversation($1)',[a]));
+assert.equal(await card(),secondPost);
+await asUser(b, async () => db.query('select create_conversation($1,$2)',[a,post]));
+assert.equal((await notices()).length,2);
+assert.equal(await card(),post);
+assert.equal((await db.query('select * from conversations')).rows.length,1);
+// Students cannot forge notices.
+await asUser(a, async () => assert.rejects(db.query('insert into messages(conversation_id,sender_id,content,post_id) values ($1,$2,$3,$4)',[canonical,a,'Fake',post])));
 // A different pair still gets a separate conversation.
 const separate = await asUser(a, async () => (await db.query('select create_conversation($1) as id',[outsider])).rows[0].id);
 assert.notEqual(separate,canonical);
