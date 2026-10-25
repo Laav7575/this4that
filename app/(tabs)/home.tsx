@@ -16,6 +16,7 @@ import {
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
+import { AddPostButton } from '../../components/navigation/PrimaryNavigation';
 import { theme } from '../../constants/theme';
 import { DEMO, DEMO_USER_ID } from '../../lib/demo';
 import { getSupabase } from '../../lib/supabase';
@@ -290,7 +291,7 @@ export default function Home() {
     }, []),
   );
 
-  // Keep messaging and profile actions in the Home header.
+  // Keep post creation, messaging, and profile actions in the Home header.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
@@ -321,6 +322,7 @@ export default function Home() {
               style={styles.headerIcon}
             />
           </Pressable>
+          <AddPostButton />
         </View>
       ),
     });
