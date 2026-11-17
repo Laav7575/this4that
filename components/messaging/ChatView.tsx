@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Avatar, Button } from '../ui';
 import { HeaderIcon } from './Navigation';
@@ -59,7 +59,18 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
         </Pressable>
         <TextInput multiline value={draft} onChangeText={onDraft} editable={!sending} maxLength={5000}
           placeholder="Write a message…" placeholderTextColor={theme.colors.muted} accessibilityLabel="Write a message"
-          style={styles.input} textAlignVertical="center" />
+          style={styles.input} textAlignVertical="center" submitBehavior="newline"
+          onKeyPress={Platform.OS === 'web' ? event => {
+            // React Native Web forwards the browser keyboard event. Keep phone
+            // keyboards and IME composition on their normal newline behavior.
+            const key = event.nativeEvent as typeof event.nativeEvent & {
+              shiftKey?: boolean; isComposing?: boolean; keyCode?: number; repeat?: boolean;
+            };
+            const phoneKeyboard = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (key.key !== 'Enter' || key.shiftKey || key.isComposing || key.keyCode === 229 || phoneKeyboard) return;
+            event.preventDefault();
+            if (!key.repeat && draft.trim() && !sending) onSend();
+          } : undefined} />
         <Pressable accessibilityRole="button" accessibilityLabel="Send message" accessibilityState={{ disabled: !draft.trim() || sending, busy: sending }}
           disabled={!draft.trim() || sending} onPress={onSend} style={[styles.send, (!draft.trim() || sending) && styles.disabled]}>
           {sending ? <ActivityIndicator color={theme.colors.text} size="small" /> : <Text style={styles.sendText}>↑</Text>}
