@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { getPost, getProfile } from '../../services/backend';
+import { deletePost, getPost, getProfile } from '../../services/backend';
+import { getMyUserId } from '../../services/profileData';
 import type { PostRow, ProfileRow } from '../../types/database';
 
 type Status = 'loading' | 'ready' | 'missing' | 'error';
@@ -63,37 +64,45 @@ export default function PostDetails() {
     status: Status;
     post: PostRow | null;
     author: ProfileRow | null;
+    viewerId: string | null;
     error: string;
-  }>({ id: '', status: 'loading', post: null, author: null, error: '' });
+  }>({ id: '', status: 'loading', post: null, author: null, viewerId: null, error: '' });
   const [retry, setRetry] = useState(0);
+  const retryRef = useRef(0);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [actionError, setActionError] = useState('');
   const isCurrentPost = loaded.id === postId;
   const status: Status = !postId ? 'missing' : isCurrentPost ? loaded.status : 'loading';
   const post = isCurrentPost ? loaded.post : null;
   const author = isCurrentPost ? loaded.author : null;
+  const viewerId = isCurrentPost ? loaded.viewerId : null;
   const error = isCurrentPost ? loaded.error : '';
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
+    const requestRetry = retry;
     if (!postId) return () => { active = false; };
 
     const load = async () => {
       try {
-        const result = await getPost(postId);
-        if (!active) return;
+        const [result, myId] = await Promise.all([getPost(postId), getMyUserId()]);
+        if (!active || requestRetry !== retryRef.current) return;
         if (!result) {
-          setLoaded({ id: postId, status: 'missing', post: null, author: null, error: '' });
+          setLoaded({ id: postId, status: 'missing', post: null, author: null, viewerId: myId, error: '' });
           return;
         }
         const profile = await getProfile(result.author_id);
-        if (!active) return;
-        setLoaded({ id: postId, status: 'ready', post: result, author: profile, error: '' });
+        if (!active || requestRetry !== retryRef.current) return;
+        setLoaded({ id: postId, status: 'ready', post: result, author: profile, viewerId: myId, error: '' });
       } catch (cause) {
-        if (!active) return;
+        if (!active || requestRetry !== retryRef.current) return;
         setLoaded({
           id: postId,
           status: 'error',
           post: null,
           author: null,
+          viewerId: null,
           error: cause instanceof Error ? cause.message : 'Could not load this post.',
         });
       }
@@ -101,7 +110,21 @@ export default function PostDetails() {
 
     void load();
     return () => { active = false; };
-  }, [postId, retry]);
+  }, [postId, retry]));
+
+  const removePost = async () => {
+    if (!post || deleting) return;
+    setDeleting(true);
+    setActionError('');
+    try {
+      await deletePost(post.id);
+      router.replace('/home');
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : 'Could not delete this post. Try again.');
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
 
   if (status === 'loading') {
     return <Screen><ActivityIndicator accessibilityLabel="Loading post" /></Screen>;
@@ -118,8 +141,9 @@ export default function PostDetails() {
       <Text accessibilityRole="header" style={styles.heading}>Unable to load post</Text>
       <Text accessibilityRole="alert" style={styles.body}>{error}</Text>
       <Button label="Try again" onPress={() => {
-        if (postId) setLoaded({ id: postId, status: 'loading', post: null, author: null, error: '' });
-        setRetry(value => value + 1);
+        if (postId) setLoaded({ id: postId, status: 'loading', post: null, author: null, viewerId: null, error: '' });
+        retryRef.current += 1;
+        setRetry(retryRef.current);
       }} />
     </Screen>;
   }
@@ -146,6 +170,55 @@ export default function PostDetails() {
         <Text style={styles.label}>LOCATION</Text>
         <Text style={styles.body}>{post.location}</Text>
       </Card>
+
+      {viewerId === post.author_id ? (
+        <View style={styles.ownerActions}>
+          {!confirmingDelete ? (
+            <View style={styles.actionButtons}>
+              <Button
+                label="Edit post"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/post/new', params: { postId: post.id } })}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Delete post"
+                disabled={deleting}
+                onPress={() => {
+                  setActionError('');
+                  setConfirmingDelete(true);
+                }}
+                style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.deleteText}>Delete post</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {confirmingDelete ? (
+            <View style={styles.deleteConfirmation}>
+              <Text style={styles.body}>Delete this post? This can’t be undone.</Text>
+              <View style={styles.actionButtons}>
+                <Button
+                  label="Cancel"
+                  variant="secondary"
+                  disabled={deleting}
+                  onPress={() => setConfirmingDelete(false)}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={deleting}
+                  onPress={() => void removePost()}
+                  style={({ pressed }) => [styles.deleteButton, styles.deleteConfirmed, pressed && styles.pressed]}
+                >
+                  {deleting ? <ActivityIndicator color={theme.colors.surface} size="small" /> : null}
+                  <Text style={styles.deleteConfirmedText}>{deleting ? 'Deleting…' : 'Delete permanently'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+          {actionError ? <Text accessibilityRole="alert" style={styles.actionError}>{actionError}</Text> : null}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Posted by</Text>
@@ -188,6 +261,15 @@ const styles = StyleSheet.create({
   label: { ...theme.typography.caption, color: theme.colors.muted },
   section: { gap: theme.spacing.md },
   sectionTitle: { ...theme.typography.heading, color: theme.colors.text },
+  ownerActions: { gap: theme.spacing.md },
+  actionButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md },
+  deleteConfirmation: { gap: theme.spacing.md, padding: theme.spacing.md, backgroundColor: theme.colors.highlight, borderRadius: theme.radius.md },
+  deleteButton: { minHeight: theme.dimensions.touchTarget, borderWidth: 1, borderColor: theme.colors.error, borderRadius: theme.radius.button, paddingHorizontal: theme.spacing.xl, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: theme.spacing.sm },
+  deleteText: { ...theme.typography.button, color: theme.colors.error },
+  deleteConfirmed: { backgroundColor: theme.colors.error },
+  deleteConfirmedText: { ...theme.typography.button, color: theme.colors.surface },
+  actionError: { ...theme.typography.body, color: theme.colors.error },
+  pressed: { opacity: 0.6 },
   author: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, padding: theme.spacing.md, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border },
   authorDetails: { flex: 1, gap: theme.spacing.xs },
   authorName: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text },

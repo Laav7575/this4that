@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { Button, Card, Input } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { createPost } from '../../services/backend';
+import { createPost, getPost, updatePost } from '../../services/backend';
+import { getMyUserId } from '../../services/profileData';
 import type { PostInput, PostRow } from '../../types/database';
 
 const categories = ['Tutoring', 'Technology', 'Errands', 'Moving', 'Pets', 'Handy help', 'Other'];
@@ -21,12 +22,59 @@ const initialFields: Fields = {
 };
 
 export default function NewPost() {
+	const { postId: routePostId } = useLocalSearchParams<{ postId?: string | string[] }>();
+	const postId = Array.isArray(routePostId) ? routePostId[0] : routePostId;
+	return <>
+		<Stack.Screen options={{ title: postId ? 'Edit Post' : 'New Post' }} />
+		<PostForm key={postId ?? 'new'} postId={postId} />
+	</>;
+}
+
+function PostForm({ postId }: { postId?: string }) {
 	const [type, setType] = useState<PostInput['type']>('Request');
 	const [fields, setFields] = useState<Fields>(initialFields);
 	const [submitted, setSubmitted] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [createdPost, setCreatedPost] = useState<PostRow>();
+	const [editStatus, setEditStatus] = useState<'loading' | 'ready' | 'missing' | 'forbidden' | 'error'>(postId ? 'loading' : 'ready');
+	const [editError, setEditError] = useState('');
+
+	useEffect(() => {
+		let active = true;
+		if (!postId) return () => { active = false; };
+
+		const loadPost = async () => {
+			try {
+				const [post, myId] = await Promise.all([getPost(postId), getMyUserId()]);
+				if (!active) return;
+				if (!post) {
+					setEditStatus('missing');
+					return;
+				}
+				if (post.author_id !== myId) {
+					setEditStatus('forbidden');
+					return;
+				}
+				setType(post.type);
+				setFields({
+					title: post.title,
+					description: post.description,
+					category: post.category,
+					availability: post.availability,
+					location: post.location,
+				});
+				setEditStatus('ready');
+			} catch (cause) {
+				if (active) {
+					setEditError(cause instanceof Error ? cause.message : 'Could not load this post.');
+					setEditStatus('error');
+				}
+			}
+		};
+		void loadPost();
+		return () => { active = false; };
+	}, [postId]);
 
 	const validation = {
 		title: !fields.title.trim() ? 'Enter a title.' : fields.title.trim().length > POST_TITLE_MAX_LENGTH ? `Use ${POST_TITLE_MAX_LENGTH} characters or fewer.` : undefined,
@@ -47,7 +95,7 @@ export default function NewPost() {
 
 		setLoading(true);
 		try {
-			const post = await createPost({
+			const input: PostInput = {
 				...fields,
 				title: fields.title.trim(),
 				description: fields.description.trim(),
@@ -55,14 +103,44 @@ export default function NewPost() {
 				availability: fields.availability.trim(),
 				location: fields.location.trim(),
 				type,
-			});
-			setCreatedPost(post);
+			};
+			if (postId) {
+				await updatePost(postId, input);
+				router.back();
+			} else {
+				const post = await createPost(input);
+				setCreatedPost(post);
+			}
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : 'Could not publish your post. Try again.');
+			setError(cause instanceof Error ? cause.message : `Could not ${postId ? 'save your changes' : 'publish your post'}. Try again.`);
 		} finally {
 			setLoading(false);
 		}
 	};
+
+	if (postId && editStatus !== 'ready') {
+		return (
+			<Screen>
+				{editStatus === 'loading' ? (
+					<ActivityIndicator accessibilityLabel="Loading post for editing" />
+				) : (
+					<>
+						<Text accessibilityRole="header" style={styles.heading}>
+							{editStatus === 'missing' ? 'Post not found' : editStatus === 'forbidden' ? 'You can’t edit this post' : 'Unable to load post'}
+						</Text>
+						<Text accessibilityRole={editStatus === 'error' ? 'alert' : undefined} style={styles.body}>
+							{editStatus === 'missing'
+								? 'This listing may have been removed or is no longer available.'
+								: editStatus === 'forbidden'
+									? 'Only the person who created this post can edit it.'
+									: editError || 'Could not load this post. Please go back and try again.'}
+						</Text>
+						<Button label="Go back" onPress={() => router.back()} />
+					</>
+				)}
+			</Screen>
+		);
+	}
 
 	if (createdPost) {
 		return (
@@ -114,7 +192,7 @@ export default function NewPost() {
 
 	return (
 		<Screen>
-			<Text accessibilityRole="header" style={styles.heading}>New post</Text>
+			<Text accessibilityRole="header" style={styles.heading}>{postId ? 'Edit post' : 'New post'}</Text>
 
 			<View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Post type">
 				{(['Offer', 'Request'] as const).map(option => {
@@ -203,7 +281,7 @@ export default function NewPost() {
 				<Text style={styles.privacyText}>Your exact address stays private until you choose to share it.</Text>
 			</View>
 			{error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-			<Button label={`Publish ${type.toLowerCase()}`} onPress={publish} loading={loading} />
+			<Button label={postId ? 'Save changes' : `Publish ${type.toLowerCase()}`} onPress={publish} loading={loading} />
 		</Screen>
 	);
 }
