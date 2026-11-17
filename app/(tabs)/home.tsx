@@ -1,7 +1,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
-import * as Device from 'expo-device';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
@@ -37,9 +37,6 @@ const DATE_FILTERS = [
   { value: 'month', label: 'Past month' },
 ] as const;
 type DateFilter = typeof DATE_FILTERS[number]['value'];
-
-// expo-device reports the kind of device: PHONE, TABLET, DESKTOP, and so on.
-const isPhone = Device.deviceType === Device.DeviceType.PHONE;
 
 const typeOptions = [
   { value: 'All', label: 'All' },
@@ -97,7 +94,9 @@ function FilterRow({
 
 export default function Home() {
   const navigation = useNavigation();
-  const columns = isPhone ? 1 : 3;
+  const { width } = useWindowDimensions();
+  // Narrow desktop windows and phones both need readable, full-width cards.
+  const columns = width >= 1024 ? 3 : 1;
 
   const [category, setCategory] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
