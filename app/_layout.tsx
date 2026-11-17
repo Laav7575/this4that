@@ -7,11 +7,12 @@ import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import type { Session } from '@supabase/supabase-js';
-import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from '../constants/theme';
 import { DEMO } from '../lib/demo';
 import { getSupabase, manageSupabaseSessionRefresh } from '../lib/supabase';
+import { ActivityIndicator, AppState, Text, View } from 'react-native';
+import { expireSessionIfTooOld } from '../lib/sessionExpiry';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
@@ -29,9 +30,19 @@ export default function RootLayout() {
     try {
       const supabase = getSupabase();
       stopRefresh = manageSupabaseSessionRefresh();
-      supabase.auth.getSession().then(({ data }) => setSession(data.session));
-      const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
-      return () => { data.subscription.unsubscribe(); stopRefresh(); };
+      // Drop an over-age session before anything signed-in is shown.
+      expireSessionIfTooOld()
+        .then(() => supabase.auth.getSession())
+        .then(({ data }) => setSession(data.session));
+      const { data } = supabase.auth.onAuthStateChange((event, next) => {
+        if (event === 'INITIAL_SESSION') return; // handled by getSession above
+        setSession(next);
+      });
+      // Also check when the app returns to the foreground, since it can stay in memory for days.
+      const appState = AppState.addEventListener('change', (s) => {
+        if (s === 'active') void expireSessionIfTooOld();
+      });
+      return () => { data.subscription.unsubscribe(); appState.remove(); stopRefresh(); };
     } catch {
       setSession(null); // Supabase is not configured: behave as signed out
     }
