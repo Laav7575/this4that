@@ -84,6 +84,18 @@ export async function createPost(input: PostInput) {
   posts.unshift(post);
   return post;
 }
+export async function updatePost(id: string, input: Partial<PostInput>) {
+  const post = posts.find(item => item.id === id && item.author_id === DEMO_USER_ID);
+  if (!post) throw new Error('Post not found or you do not have permission to edit it.');
+  Object.assign(post, input);
+  return post;
+}
+export async function deletePost(id: string) {
+  const index = posts.findIndex(item => item.id === id && item.author_id === DEMO_USER_ID);
+  if (index < 0) throw new Error('Post not found or you do not have permission to delete it.');
+  const [post] = posts.splice(index, 1);
+  return { id: post.id };
+}
 export async function getConversation(id: string) { return conversations.find(c => c.id === id) ?? null; }
 export async function getConversations(offset = 0, limit = 20) {
   return conversations.filter(c => participants.some(p => p.conversation_id === c.id && p.user_id === DEMO_USER_ID))
