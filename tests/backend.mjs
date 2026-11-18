@@ -19,6 +19,7 @@ await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backen
 await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610180002_location_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610200001_partial_post_search.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202611170001_terms_acceptances.sql', import.meta.url), 'utf8'));
 const a = '00000000-0000-0000-0000-000000000001';
 const b = '00000000-0000-0000-0000-000000000002';
 const outsider = '00000000-0000-0000-0000-000000000003';
@@ -37,6 +38,21 @@ await asUser(a, async () => {
   const result = await db.query('update profiles set name=\'Spoof\' where id=$1 returning id',[b]);
   assert.equal(result.rows.length,0);
   await db.query('update profiles set bio=\'My bio\' where id=$1',[a]);
+});
+await asUser(a, async () => {
+  assert.equal((await db.query('select * from terms_acceptances')).rows.length, 0);
+  await assert.rejects(db.query("insert into terms_acceptances (user_id, terms_version) values ($1, 'draft-1')", [b]));
+  await assert.rejects(db.query("insert into terms_acceptances (user_id, terms_version, accepted_at) values ($1, 'draft-1', now())", [a]));
+  const accept = "insert into terms_acceptances (user_id, terms_version) values ($1, 'v1') on conflict (user_id, terms_version) do nothing";
+  await db.query(accept, [a]);
+  await db.query(accept, [a]);
+  const { rows } = await db.query('select * from terms_acceptances');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].terms_version, 'v1');
+  assert.ok(rows[0].accepted_at instanceof Date);
+});
+await asUser(b, async () => {
+  assert.equal((await db.query('select * from terms_acceptances')).rows.length, 0);
 });
 const post = await asUser(a, async () => {
   const { rows } = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
@@ -149,4 +165,4 @@ await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));
 await db.close();
-console.log('PASS: duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, and private email separation.');
+console.log('PASS: duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, private email separation, and terms acceptance permissions and retries.');
