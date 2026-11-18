@@ -25,8 +25,6 @@ import type { PostRow } from '../../types/database';
 
 
 const searchIcon = require('../../assets/icons/search.svg');
-const messagesIcon = require('../../assets/icons/messages.svg');
-const profileIcon = require('../../assets/icons/profile.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
@@ -290,37 +288,13 @@ export default function Home() {
     }, []),
   );
 
-  // Keep post creation, messaging, and profile actions in the Home header.
+  // Keep post creation in the Home header.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
       headerTitleAlign: 'center',
       headerRight: () => (
         <View style={styles.headerActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Messages"
-            onPress={() => router.push('/messages')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={messagesIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="My profile"
-            onPress={() => router.push('/profile')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={profileIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
           <AddPostButton />
         </View>
       ),
@@ -538,17 +512,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  headerButton: {
-    minWidth: theme.dimensions.touchTarget,
-    minHeight: theme.dimensions.touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    tintColor: theme.colors.text,
   },
   filterTopRow: {
     flexDirection: 'row',
