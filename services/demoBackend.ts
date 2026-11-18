@@ -13,6 +13,7 @@ const profiles: ProfileRow[] = [
   { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', location: '', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'], created_at: '2024-09-01T00:00:00.000Z' },
 ];
 const posts: PostRow[] = [
+  { id: 'my-baking', author_id: DEMO_USER_ID, title: 'Baking help for a study break', description: 'Happy to help bake cookies for your study group.', category: 'Baking', type: 'Offer', availability: 'Friday afternoon', location: 'Uptown Waterloo', created_at: minutesAgo(20) },
   { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Academic', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
   { id: 'python', author_id: 'jordan', title: 'Python programming help', description: 'Help debugging your first Python project.', category: 'Technology', type: 'Offer', availability: 'Tuesday evening', location: 'DC Library', created_at: minutesAgo(95) },
   { id: 'groceries', author_id: 'maya', title: 'Grocery pickup', description: 'Could someone pick up a few essentials on their way home?', category: 'Errands', type: 'Request', availability: 'Sunday afternoon', location: 'Uptown Waterloo', created_at: minutesAgo(180) },
@@ -21,14 +22,17 @@ const posts: PostRow[] = [
   { id: 'tech', author_id: 'aisha', title: 'Technology support', description: 'Looking for help setting up my laptop backup.', category: 'Technology', type: 'Request', availability: 'Monday evening', location: 'SLC', created_at: minutesAgo(1500) },
 ];
 const conversations: ConversationRow[] = [
+  { id: 'baking-chat', related_post_id: 'my-baking', created_at: minutesAgo(10) },
   { id: 'moving-chat', related_post_id: 'moving', created_at: minutesAgo(120) },
   { id: 'pets-chat', related_post_id: 'pets', created_at: minutesAgo(1440) },
 ];
 const participants: ParticipantRow[] = [
+  { conversation_id: 'baking-chat', user_id: DEMO_USER_ID }, { conversation_id: 'baking-chat', user_id: 'maya' },
   { conversation_id: 'moving-chat', user_id: DEMO_USER_ID }, { conversation_id: 'moving-chat', user_id: 'jordan' },
   { conversation_id: 'pets-chat', user_id: DEMO_USER_ID }, { conversation_id: 'pets-chat', user_id: 'aisha' },
 ];
 const messages: MessageRow[] = [
+  { id: 'baking-1', conversation_id: 'baking-chat', sender_id: 'maya', content: 'Thanks for helping with the cookies! They turned out great.', timestamp: minutesAgo(5) },
   { id: 'm1', conversation_id: 'moving-chat', sender_id: DEMO_USER_ID, content: 'Hi Jordan! I can help carry the desk on Saturday.', timestamp: minutesAgo(110) },
   { id: 'm2', conversation_id: 'moving-chat', sender_id: 'jordan', content: 'Amazing, thank you! Could I help you with anything in exchange?', timestamp: minutesAgo(100) },
   { id: 'm3', conversation_id: 'moving-chat', sender_id: 'jordan', content: 'Saturday at 2 works. Could we meet at Dana Porter?', timestamp: minutesAgo(15) },
@@ -129,7 +133,21 @@ export async function getMessagesBefore(conversationId: string, before: MessageR
   return messages.filter(m => m.conversation_id === conversationId && newestFirst(m, before) > 0).sort(newestFirst).slice(0, limit);
 }
 export async function sendMessage(conversationId: string, content: string) {
+  if (conversations.find(c => c.id === conversationId)?.closed_at) throw new Error('Reopen this conversation before sending a message.');
   const message: MessageRow = { id: newId('msg'), conversation_id: conversationId, sender_id: DEMO_USER_ID, content, timestamp: new Date().toISOString() };
   messages.push(message);
   return message;
+}
+
+export async function setPostCompleted(id: string, completed: boolean): Promise<PostRow> {
+  const index = posts.findIndex(p => p.id === id && p.author_id === DEMO_USER_ID);
+  if (index < 0) throw new Error('Only the post owner can change its status.');
+  posts[index] = { ...posts[index], completed_at: completed ? posts[index].completed_at ?? new Date().toISOString() : null };
+  return posts[index];
+}
+export async function setConversationClosed(id: string, closed: boolean): Promise<ConversationRow> {
+  const index = conversations.findIndex(c => c.id === id && participants.some(p => p.conversation_id === id && p.user_id === DEMO_USER_ID));
+  if (index < 0) throw new Error('This conversation is unavailable.');
+  conversations[index] = { ...conversations[index], closed_at: closed ? conversations[index].closed_at ?? new Date().toISOString() : null };
+  return conversations[index];
 }

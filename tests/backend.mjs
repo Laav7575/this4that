@@ -186,11 +186,50 @@ await asUser(outsider, async () => {
   await assert.rejects(db.query('insert into conversation_participants values ($1,$2)',[conversation,outsider]));
   await assert.rejects(db.query('select create_conversation($1,$2)',[b,post]));
 });
+// Completion and closure are independent, reversible, and enforced in PostgreSQL.
+await db.exec(await readFile(new URL('../supabase/migrations/202611180003_completion_states.sql', import.meta.url), 'utf8'));
+const historyBeforeClosure = (await db.query('select * from messages order by id')).rows;
+await asUser(a, async () => {
+  const completed = (await db.query('select * from set_post_completed($1,true)', [post])).rows[0];
+  assert(completed.completed_at);
+  assert.deepEqual((await db.query('select * from set_post_completed($1,true)', [post])).rows[0].completed_at, completed.completed_at);
+  assert.equal((await db.query('select closed_at from conversations where id=$1',[canonical])).rows[0].closed_at, null);
+  await assert.rejects(db.query('update posts set completed_at=now() where id=$1',[post]));
+});
+await asUser(b, async () => {
+  await assert.rejects(db.query('select set_post_completed($1,false)', [post]));
+  assert((await db.query('select completed_at from posts where id=$1', [post])).rows[0].completed_at);
+  assert((await db.query('select * from set_conversation_closed($1,true)',[canonical])).rows[0].closed_at);
+  await assert.rejects(db.query('update conversations set closed_at=null where id=$1',[canonical]));
+  await assert.rejects(db.query("insert into messages(conversation_id,sender_id,content) values ($1,$2,'Stale client')",[canonical,b]));
+});
+await asUser(outsider, async () => {
+  await assert.rejects(db.query('select set_conversation_closed($1,false)',[canonical]));
+  await assert.rejects(db.query('select set_post_completed($1,false)',[post]));
+});
+for (const user of [unconfirmed, nonstudent]) await asUser(user, async () => {
+  await assert.rejects(db.query('select set_conversation_closed($1,false)',[canonical]));
+  await assert.rejects(db.query('select set_post_completed($1,true)',[post]));
+});
+assert.deepEqual((await db.query('select * from messages order by id')).rows, historyBeforeClosure);
+await asUser(a, async () => {
+  // Opening the same pair from another post does not silently reopen the closed chat.
+  assert.equal((await db.query('select create_conversation($1,$2) as id',[b,secondPost])).rows[0].id, canonical);
+  assert((await db.query('select closed_at from conversations where id=$1',[canonical])).rows[0].closed_at);
+  assert.equal((await db.query('select * from set_conversation_closed($1,false)',[canonical])).rows[0].closed_at, null);
+  assert((await db.query('select completed_at from posts where id=$1',[post])).rows[0].completed_at);
+  await db.query("insert into messages(conversation_id,sender_id,content) values ($1,$2,'Reopened successfully')",[canonical,a]);
+  assert.equal((await db.query('select * from set_post_completed($1,false)',[post])).rows[0].completed_at, null);
+  await assert.rejects(db.query('select set_post_completed($1,null)',[post]));
+  await assert.rejects(db.query('select set_conversation_closed($1,null)',[canonical]));
+});
 await db.exec('set role anon');
+await assert.rejects(db.query('select set_post_completed($1,true)',[post]));
+await assert.rejects(db.query('select set_conversation_closed($1,true)',[canonical]));
 await assert.rejects(db.query('select * from profiles'));
 await assert.rejects(db.query('select * from get_post_categories()'));
 await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));
 await db.close();
-console.log('PASS: duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, private email separation, and terms acceptance permissions and retries.');
+console.log('PASS: independent completion/closure, reopen, closed-chat send rejection, status authorization, duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, and private email separation, and terms acceptance permissions and retries.');

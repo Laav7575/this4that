@@ -10,12 +10,13 @@ export function InboxView({ items, userId, loading, error, onRefresh, onOpen, on
   onRefresh: () => void; onOpen: (id: string) => void; onExplore: () => void;
 }) {
   const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'closed'>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const unread = items.filter(item => item.unread).length;
-  const visible = useMemo(() => items.filter(item => (!unreadOnly || item.unread) &&
+  const visible = useMemo(() => items.filter(item => (status === 'all' || (status === 'closed') === !!item.conversation.closed_at) && (!unreadOnly || item.unread) &&
     `${item.person?.name ?? ''} ${item.latest?.content ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))
     .sort((a, b) => (b.latest?.timestamp ?? b.conversation.created_at).localeCompare(a.latest?.timestamp ?? a.conversation.created_at)),
-  [items, query, unreadOnly]);
+  [items, query, unreadOnly, status]);
   return <FlatList data={visible} keyExtractor={item => item.conversation.id} style={styles.list}
     contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled" refreshing={loading} onRefresh={onRefresh}
     ListHeaderComponent={<View style={styles.intro}>
@@ -33,26 +34,34 @@ export function InboxView({ items, userId, loading, error, onRefresh, onOpen, on
           <Text style={styles.filterText}>{value ? `Unread (${unread})` : 'All messages'}</Text>
         </Pressable>)}
       </View>
+      <View style={styles.filters}>
+        {(['all', 'active', 'closed'] as const).map(value => <Pressable key={value} accessibilityRole="button"
+          accessibilityState={{ selected: status === value }} onPress={() => setStatus(value)}
+          style={[styles.filter, status === value && styles.selected]}>
+          <Text style={styles.filterText}>{value === 'all' ? 'All statuses' : value === 'active' ? 'Active' : 'Closed'}</Text>
+        </Pressable>)}
+      </View>
       {!!error && <View style={styles.feedback}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button label="Retry" variant="secondary" onPress={onRefresh} /></View>}
     </View>}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.person?.name ?? 'Student'}, ${item.unread ? 'unread, ' : ''}${item.latest?.content ?? 'Start a conversation'}`}
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.person?.name ?? 'Student'}, ${item.conversation.closed_at ? 'closed' : 'active'}, ${item.unread ? 'unread, ' : ''}${item.latest?.content ?? 'Start a conversation'}`}
       onPress={() => onOpen(item.conversation.id)} style={({ pressed }) => [styles.row, pressed && styles.selected]}>
       <Avatar name={item.person?.name ?? 'Student'} uri={item.person?.avatar ?? undefined} />
       <View style={styles.rowBody}>
         <View style={styles.rowTop}><Text numberOfLines={1} style={styles.name}>{item.person?.name ?? 'Student'}</Text>
           <Text style={styles.time}>{inboxTime(item.latest?.timestamp ?? item.conversation.created_at)}</Text></View>
+        <Text style={styles.time}>{item.conversation.closed_at ? 'Closed' : 'Active'}</Text>
         <Text numberOfLines={1} style={styles.preview}>{item.latest ? `${item.latest.sender_id === userId ? 'You: ' : ''}${item.latest.content}` : 'Say hello and arrange your exchange.'}</Text>
       </View>
       {item.unread && <Image source={require('../../assets/icons/messaging/unread.svg')} style={styles.dot} contentFit="contain" />}
     </Pressable>}
     ListEmptyComponent={<View style={styles.empty}>
       {loading ? <ActivityIndicator color={theme.colors.primary} accessibilityLabel="Loading messages" /> : !error && <>
-        <Text style={styles.emptyTitle}>{query ? 'No matching conversations' : unreadOnly ? 'You’re all caught up' : 'Your next exchange starts here'}</Text>
-        <Text style={styles.emptyText}>{query ? 'Try another name or a word from your messages.' : unreadOnly ? 'New messages will appear here.' : 'Find a service and message a student to start your first exchange.'}</Text>
-        {(!query && !unreadOnly) && <Button label="Explore services" onPress={onExplore} />}
+        <Text style={styles.emptyTitle}>{query || status !== 'all' ? 'No matching conversations' : unreadOnly ? 'You’re all caught up' : 'Your next exchange starts here'}</Text>
+        <Text style={styles.emptyText}>{status !== 'all' ? 'Try another status filter.' : query ? 'Try another name or a word from your messages.' : unreadOnly ? 'New messages will appear here.' : 'Find a service and message a student to start your first exchange.'}</Text>
+        {(!query && !unreadOnly && status === 'all') && <Button label="Explore services" onPress={onExplore} />}
       </>}
     </View>}
-    // ListFooterComponent={<Text style={styles.footer}>Connect. Exchange. Help each other out.</Text>} 
+    // ListFooterComponent={<Text style={styles.footer}>Connect. Exchange. Help each other out.</Text>}
     />;
 }
 const styles = StyleSheet.create({

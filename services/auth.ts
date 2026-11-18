@@ -16,13 +16,13 @@ export async function signUp(email: string, password: string, name?: string) {
 export async function signIn(email: string, password: string) {
   const { data, error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
   if (error) throw error;
-  await markSessionStart();         
+  await markSessionStart();
   return data;
 }
 export async function signOut() {
   const { error } = await getSupabase().auth.signOut();
   if (error) throw error;
-  await clearSessionStart();           
+  await clearSessionStart();
 }
 
 /** Sends the reset email. Supabase answers the same way whether or not the account exists. */

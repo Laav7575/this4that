@@ -97,7 +97,7 @@ export function ProfileView({ profile, posts, stats, isSelf, onMessage, messageL
             <Pressable
               key={post.id}
               accessibilityRole="link"
-              accessibilityLabel={`${post.type}: ${post.title}`}
+              accessibilityLabel={`${post.completed_at ? 'Completed' : 'Active'} ${post.type}: ${post.title}`}
               onPress={() =>
                 router.push({ pathname: '/post/[id]', params: { id: post.id } })
               }
@@ -139,7 +139,7 @@ export function ProfileView({ profile, posts, stats, isSelf, onMessage, messageL
                   },
                 ]}
               >
-                <Text style={styles.badgeText}>{post.type}</Text>
+                <Text style={styles.badgeText}>{post.completed_at ? 'Completed' : 'Active · ' + post.type}</Text>
               </View>
             </Pressable>
           ))

@@ -8,7 +8,7 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
     disabled={inactive} style={state => [styles.base, variant === 'primary' ? styles.primary : styles.secondary,
       (inactive || state.pressed) && styles.dimmed, typeof style === 'function' ? style(state) : style]}>
     {loading && <ActivityIndicator color={color} size="small" />}
-    <Text style={[theme.typography.button, { color }]}>{label}</Text>
+    <Text style={[theme.typography.button, { color, flexShrink: 1, textAlign: 'center' }]}>{label}</Text>
   </Pressable>;
 }
 const styles = StyleSheet.create({

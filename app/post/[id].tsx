@@ -6,9 +6,11 @@ import { MessageAuthorButton } from '../../components/messaging/MessageAuthorBut
 import { ReportPostButton } from '../../components/reports/ReportPostButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { deletePost, getPost, getProfile } from '../../services/backend';
-import { getMyUserId } from '../../services/profileData';
+import { deletePost, getPost, getProfile, setPostCompleted } from '../../services/backend';
 import type { PostRow, ProfileRow } from '../../types/database';
+
+import { getMyUserId } from '../../services/profileData';
+import { ConfirmAction } from '../../components/ui/ConfirmAction';
 
 type Status = 'loading' | 'ready' | 'missing' | 'error';
 const DESCRIPTION_PREVIEW_LINES = 4;
@@ -157,7 +159,7 @@ export default function PostDetails() {
       <Card>
         <View style={styles.topline}>
           <Text style={[styles.badge, isOffer ? styles.offerBadge : styles.requestBadge]}>
-            {isOffer ? 'Offering' : 'Requesting'}
+            {post.completed_at ? 'Completed' : 'Active · ' + (isOffer ? 'Offering' : 'Requesting')}
           </Text>
           <View style={styles.createdRow}>
             <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
@@ -246,7 +248,17 @@ export default function PostDetails() {
         </Pressable>
       </View>
 
-      <MessageAuthorButton key={post.id} authorId={post.author_id} postId={post.id} />
+      {post.completed_at && <Text style={styles.body}>This post has been marked fulfilled by its owner.</Text>}
+      {viewerId === post.author_id ? <ConfirmAction
+        label={post.completed_at ? 'Reopen post' : 'Mark as complete'}
+        description={post.completed_at
+          ? 'This post will be active again. Your conversations will keep their current status.'
+          : 'Mark this post as fulfilled. It will stay visible as completed. This does not close any conversations, and you can reopen the post later.'}
+        onConfirm={async () => {
+          const updated = await setPostCompleted(post.id, !post.completed_at);
+          setLoaded(current => current.id === updated.id ? { ...current, post: updated } : current);
+        }} /> : !post.completed_at && <MessageAuthorButton key={post.id} authorId={post.author_id} postId={post.id} />}
+
     </Screen>
   );
 }
