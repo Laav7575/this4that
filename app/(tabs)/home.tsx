@@ -580,6 +580,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     minHeight: theme.dimensions.touchTarget - 2,
     padding: 0,
+    paddingLeft: theme.spacing.sm,
     color: theme.colors.text,
   },
   clearSearch: {
@@ -614,7 +615,6 @@ const styles = StyleSheet.create({
   },
   filters: {
     gap: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
   },
   filterScroll: {
     flexGrow: 0,
@@ -633,11 +633,10 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
   },
   searchPanel: {
-    gap: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   dateGroup: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   fieldLabel: {
     ...theme.typography.label,

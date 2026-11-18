@@ -62,13 +62,14 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
         <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.category}</Text></View>
         <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.availability}</Text></View>
       </View>
-      {footer}
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: { gap: theme.spacing.sm, flexGrow: 1, minWidth: 0 },
+  footer: { marginTop: 'auto' },
   cardHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: theme.spacing.md },
   cardWho: { flex: 1, minWidth: 100 },
   name: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text },
