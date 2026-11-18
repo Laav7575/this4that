@@ -27,10 +27,10 @@ insert into public.profiles (id,name,program,bio,avatar,skills) values
 on conflict do nothing;
 
 insert into public.posts (id,author_id,title,description,category,type,availability,location,created_at) values
-('05fff3e3-31b8-4422-a160-faf06383cd0d','64ef8769-cd31-44f6-a56b-d1b5d8a73eac','Calculus tutoring','Review limits and derivatives together at Dana Porter.','Tutoring','Offer','Weekday afternoons','Dana Porter Library','2026-10-10T14:00:00Z'),
+('05fff3e3-31b8-4422-a160-faf06383cd0d','64ef8769-cd31-44f6-a56b-d1b5d8a73eac','Calculus tutoring','Review limits and derivatives together at Dana Porter.','Academic','Offer','Weekday afternoons','Dana Porter Library','2026-10-10T14:00:00Z'),
 ('09551c98-addb-4834-a962-63d10e9dff8a','59e84f45-effd-4d3e-8d5c-7d3dcdc63e72','Python programming help','Help debugging your first Python project.','Technology','Offer','Tuesday evening','DC Library','2026-10-10T15:00:00Z'),
 ('9a6fb0c8-89a2-4080-ad75-b26afac7ddd9','64ef8769-cd31-44f6-a56b-d1b5d8a73eac','Grocery pickup','Could someone pick up a few essentials on their way home?','Errands','Request','Sunday afternoon','Uptown Waterloo','2026-10-10T16:00:00Z'),
-('754deef3-47ff-4c91-a1f8-8bcd821e5d05','59e84f45-effd-4d3e-8d5c-7d3dcdc63e72','Moving assistance','Need an extra pair of hands to carry a small desk.','Moving','Request','Saturday at 2 PM','University Avenue','2026-10-10T17:00:00Z'),
+('754deef3-47ff-4c91-a1f8-8bcd821e5d05','59e84f45-effd-4d3e-8d5c-7d3dcdc63e72','Moving assistance','Need an extra pair of hands to carry a small desk.','Household','Request','Saturday at 2 PM','University Avenue','2026-10-10T17:00:00Z'),
 ('f9493a68-88d5-4990-a1a2-68a36fbf0a08','05df20ed-5d3b-4fdc-9f29-dc7a0d71d5f0','Pet sitting','Happy to watch your cat while you visit home.','Pets','Offer','Weekends','Lakeshore','2026-10-10T18:00:00Z'),
 ('d76f0543-6daf-4e86-ab17-8f3ebf18148f','05df20ed-5d3b-4fdc-9f29-dc7a0d71d5f0','Technology support','Looking for help setting up my laptop backup.','Technology','Request','Monday evening','SLC','2026-10-10T19:00:00Z')
 on conflict do nothing;

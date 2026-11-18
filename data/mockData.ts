@@ -6,10 +6,10 @@ export const users: User[] = [
 ];
 export const currentUser = users[0];
 export const posts: Post[] = [
-  { id: 'calculus', authorId: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Tutoring', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', createdAt: '2026-10-10T14:00:00Z' },
+  { id: 'calculus', authorId: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Academic', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', createdAt: '2026-10-10T14:00:00Z' },
   { id: 'python', authorId: 'jordan', title: 'Python programming help', description: 'Help debugging your first Python project.', category: 'Technology', type: 'Offer', availability: 'Tuesday evening', location: 'DC Library', createdAt: '2026-10-10T15:00:00Z' },
   { id: 'groceries', authorId: 'maya', title: 'Grocery pickup', description: 'Could someone pick up a few essentials on their way home?', category: 'Errands', type: 'Request', availability: 'Sunday afternoon', location: 'Uptown Waterloo', createdAt: '2026-10-10T16:00:00Z' },
-  { id: 'moving', authorId: 'jordan', title: 'Moving assistance', description: 'Need an extra pair of hands to carry a small desk.', category: 'Moving', type: 'Request', availability: 'Saturday at 2 PM', location: 'University Avenue', createdAt: '2026-10-10T17:00:00Z' },
+  { id: 'moving', authorId: 'jordan', title: 'Moving assistance', description: 'Need an extra pair of hands to carry a small desk.', category: 'Household', type: 'Request', availability: 'Saturday at 2 PM', location: 'University Avenue', createdAt: '2026-10-10T17:00:00Z' },
   { id: 'pets', authorId: 'aisha', title: 'Pet sitting', description: 'Happy to watch your cat while you visit home.', category: 'Pets', type: 'Offer', availability: 'Weekends', location: 'Lakeshore', createdAt: '2026-10-10T18:00:00Z' },
   { id: 'tech', authorId: 'aisha', title: 'Technology support', description: 'Looking for help setting up my laptop backup.', category: 'Technology', type: 'Request', availability: 'Monday evening', location: 'SLC', createdAt: '2026-10-10T19:00:00Z' },
 ];
