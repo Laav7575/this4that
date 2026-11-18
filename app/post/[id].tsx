@@ -3,6 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
+import { ReportPostButton } from '../../components/reports/ReportPostButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
 import { deletePost, getPost, getProfile } from '../../services/backend';
@@ -158,7 +159,15 @@ export default function PostDetails() {
           <Text style={[styles.badge, isOffer ? styles.offerBadge : styles.requestBadge]}>
             {isOffer ? 'Offering' : 'Requesting'}
           </Text>
-          <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
+          <View style={styles.createdRow}>
+            <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
+            <ReportPostButton
+              postId={post.id}
+              authorId={post.author_id}
+              authorName={authorName}
+              currentUserId={viewerId ?? undefined}
+            />
+          </View>
         </View>
         <Text accessibilityRole="header" style={styles.title}>{post.title}</Text>
         <PostDescription key={post.id} description={post.description} />
@@ -255,6 +264,7 @@ const styles = StyleSheet.create({
   offerBadge: { backgroundColor: theme.colors.primary },
   requestBadge: { backgroundColor: theme.colors.secondary },
   created: { ...theme.typography.caption, color: theme.colors.muted },
+  createdRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   tag: { ...theme.typography.caption, color: theme.colors.body, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   rule: { height: 1, backgroundColor: theme.colors.border },
