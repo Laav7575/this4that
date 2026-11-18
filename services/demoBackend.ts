@@ -13,10 +13,10 @@ const profiles: ProfileRow[] = [
   { id: 'aisha', name: 'Aisha Rahman', program: 'Engineering', location: '', bio: 'I enjoy helping neighbours and looking after pets.', avatar: null, skills: ['Pet sitting', 'Moving'], created_at: '2024-09-01T00:00:00.000Z' },
 ];
 const posts: PostRow[] = [
-  { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Tutoring', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
+  { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Academic', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
   { id: 'python', author_id: 'jordan', title: 'Python programming help', description: 'Help debugging your first Python project.', category: 'Technology', type: 'Offer', availability: 'Tuesday evening', location: 'DC Library', created_at: minutesAgo(95) },
   { id: 'groceries', author_id: 'maya', title: 'Grocery pickup', description: 'Could someone pick up a few essentials on their way home?', category: 'Errands', type: 'Request', availability: 'Sunday afternoon', location: 'Uptown Waterloo', created_at: minutesAgo(180) },
-  { id: 'moving', author_id: 'jordan', title: 'Moving assistance', description: 'Need an extra pair of hands to carry a small desk.', category: 'Moving', type: 'Request', availability: 'Saturday at 2 PM', location: 'University Avenue', created_at: minutesAgo(300) },
+  { id: 'moving', author_id: 'jordan', title: 'Moving assistance', description: 'Need an extra pair of hands to carry a small desk.', category: 'Household', type: 'Request', availability: 'Saturday at 2 PM', location: 'University Avenue', created_at: minutesAgo(300) },
   { id: 'pets', author_id: 'aisha', title: 'Pet sitting', description: 'Happy to watch your cat while you visit home.', category: 'Pets', type: 'Offer', availability: 'Weekends', location: 'Lakeshore', created_at: minutesAgo(600) },
   { id: 'tech', author_id: 'aisha', title: 'Technology support', description: 'Looking for help setting up my laptop backup.', category: 'Technology', type: 'Request', availability: 'Monday evening', location: 'SLC', created_at: minutesAgo(1500) },
 ];

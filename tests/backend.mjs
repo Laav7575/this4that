@@ -16,6 +16,26 @@ await db.exec(`
   grant execute on function auth.uid() to authenticated;
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backend.sql', import.meta.url), 'utf8'));
+const migrationOwner = '00000000-0000-0000-0000-000000000006';
+await db.query("insert into auth.users values ($1,'migration@uwaterloo.ca',now())", [migrationOwner]);
+await db.query("insert into public.profiles(id,name) values ($1,'Migration fixture')", [migrationOwner]);
+await db.query(`insert into public.posts(author_id,title,description,category,type,availability,location)
+  values ($1,'Old tutoring','Details','Tutoring','Request','Now','Campus'),
+    ($1,'Academic and career help','Details','Academic and Career Help','Request','Now','Campus'),
+    ($1,'Old moving','Details','Moving','Request','Now','Campus'),
+    ($1,'Household help','Details','Household Help','Request','Now','Campus'),
+    ($1,'Old handy help','Details','Handy help','Request','Now','Campus'),
+    ($1,'Arts and crafts','Details','Arts & Crafts','Request','Now','Campus'),
+    ($1,'Keep technology','Details','Technology','Request','Now','Campus'),
+    ($1,'Keep errands','Details','Errands','Request','Now','Campus'),
+    ($1,'Keep pets','Details','Pets','Request','Now','Campus'),
+    ($1,'Keep other','Details','Other','Request','Now','Campus')`, [migrationOwner]);
+await db.exec(await readFile(new URL('../supabase/migrations/202611180002_post_category_renames.sql', import.meta.url), 'utf8'));
+assert.deepEqual(
+  (await db.query("select category from public.posts where author_id=$1 order by title", [migrationOwner])).rows.map(row => row.category),
+  ['Academic', 'Creative', 'Household', 'Errands', 'Other', 'Pets', 'Technology', 'Creative', 'Household', 'Academic'],
+);
+await db.query('delete from public.profiles where id=$1', [migrationOwner]);
 await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610180002_location_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610200001_partial_post_search.sql', import.meta.url), 'utf8'));
@@ -57,21 +77,21 @@ await asUser(b, async () => {
 });
 const post = await asUser(a, async () => {
   const { rows } = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-    values ($1,'Tutoring','Calculus help','Tutoring','Offer','Weekends','Library') returning id`,[a]);
+    values ($1,'Tutoring','Calculus help','Academic','Offer','Weekends','Library') returning id`,[a]);
   await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-    values ($1,'Long availability','Calculus help','Tutoring','Offer',$2,'Library')`, [a, 'x'.repeat(61)]));
+    values ($1,'Long availability','Calculus help','Academic','Offer',$2,'Library')`, [a, 'x'.repeat(61)]));
   await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-    values ($1,'Long location','Calculus help','Tutoring','Offer','Weekends',$2)`, [a, 'x'.repeat(61)]));
+    values ($1,'Long location','Calculus help','Academic','Offer','Weekends',$2)`, [a, 'x'.repeat(61)]));
   const maxLengthPost = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-    values ($1,'Max length','Calculus help','Tutoring','Offer',$2,$2) returning id`, [a, 'x'.repeat(60)]);
+    values ($1,'Max length','Calculus help','Academic','Offer',$2,$2) returning id`, [a, 'x'.repeat(60)]);
   await db.query('delete from posts where id=$1', [maxLengthPost.rows[0].id]);
   return rows[0].id;
 });
 const olderPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location,created_at)
-  values ($1,'Old tutoring post','Older listing','Tutoring','Offer','Weekends','Davis Centre Library',now() - interval '8 days')
+  values ($1,'Old tutoring post','Older listing','Academic','Offer','Weekends','Davis Centre Library',now() - interval '8 days')
   returning id`,[a])).rows[0].id;
 const wildcardPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-  values ($1,'100% match','Literal wildcard sample','Tutoring','Offer','Weekends','Library') returning id`,[a])).rows[0].id;
+  values ($1,'100% match','Literal wildcard sample','Academic','Offer','Weekends','Library') returning id`,[a])).rows[0].id;
 await asUser(b, async () => {
   const matches = await db.query(`select id from posts
     where search_document @@ websearch_to_tsquery('english', $1)`, ['calculus library']);
@@ -84,24 +104,24 @@ await asUser(b, async () => {
   assert.deepEqual((await db.query(`select id from posts
     where location_search_document @@ websearch_to_tsquery('english', $1)`, ['calculus'])).rows, []);
   assert.deepEqual((await db.query(`select id from posts
-    where created_at >= now() - interval '1 day' and type = 'Offer' and category = 'Tutoring'
+    where created_at >= now() - interval '1 day' and type = 'Offer' and category = 'Academic'
       and title != '100% match'`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query(`select id from posts
-    where created_at >= now() - interval '7 days' and type = 'Offer' and category = 'Tutoring'
+    where created_at >= now() - interval '7 days' and type = 'Offer' and category = 'Academic'
       and title != '100% match'`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query(`select id from posts
-    where created_at >= now() - interval '30 days' and type = 'Offer' and category = 'Tutoring'
+    where created_at >= now() - interval '30 days' and type = 'Offer' and category = 'Academic'
       and title != '100% match' order by created_at desc`)).rows.map(row => row.id), [post, olderPost]);
   assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, 'culu', null, null)`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, null, 'vis Centre', null)`)).rows.map(row => row.id), [olderPost]);
   assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, '%', null, null)`)).rows.map(row => row.id), [wildcardPost]);
-  assert.deepEqual((await db.query(`select id from search_posts(0, 50, 'Tutoring', 'Offer', 'culu', null, now() - interval '1 day')`)).rows.map(row => row.id), [post]);
+  assert.deepEqual((await db.query(`select id from search_posts(0, 50, 'Academic', 'Offer', 'culu', null, now() - interval '1 day')`)).rows.map(row => row.id), [post]);
   assert.deepEqual((await db.query(`select id from search_posts(0, 50, null, null, 'culu', null, now() - interval '1 day')`)).rows.map(row => row.id), [post]);
-  assert.deepEqual((await db.query('select * from get_post_categories()')).rows, [{ category: 'Tutoring' }]);
+  assert.deepEqual((await db.query('select * from get_post_categories()')).rows, [{ category: 'Academic' }]);
 });
 await asUser(b, async () => {
   await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-    values ($1,'Spoof','Text','Tutoring','Offer','Now','Library')`,[a]));
+    values ($1,'Spoof','Text','Academic','Offer','Now','Library')`,[a]));
   assert.equal((await db.query('update posts set title=\'Spoof\' where id=$1 returning id',[post])).rows.length,0);
   assert.equal((await db.query('delete from posts where id=$1 returning id',[post])).rows.length,0);
   await assert.rejects(db.query('update posts set author_id=$1 where id=$2',[b,post]));
@@ -128,7 +148,7 @@ assert.equal((await db.query('select * from conversations')).rows.length,1);
 assert.deepEqual((await db.query('select id, sender_id, content, timestamp from messages order by id')).rows,beforeMerge);
 assert.equal((await db.query('select * from conversation_participants')).rows.length,2);
 const secondPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
-  values ($1,'Moving','Help moving','Moving','Request','Saturday','Campus') returning id`,[b])).rows[0].id;
+  values ($1,'Moving','Help moving','Household','Request','Saturday','Campus') returning id`,[b])).rows[0].id;
 for (const [caller, other] of [[a,b],[b,a]]) await asUser(caller, async () => {
   for (const context of [post,secondPost,null]) {
     assert.equal((await db.query('select create_conversation($1,$2) as id',[other,context])).rows[0].id,canonical);

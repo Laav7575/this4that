@@ -54,7 +54,7 @@ Sources: https://supabase.com/docs/guides/auth/quickstarts/react-native and http
 
 ## Ready-to-connect APIs
 
-The base schema is in `supabase/migrations/202610120001_backend.sql`; Search uses the backend post APIs when Supabase mode is enabled. Apply `supabase/migrations/202610180001_post_search.sql` after the base schema to add the category/type feed indexes and category-list RPC. Apply `supabase/migrations/202610180002_location_search.sql` next to add indexed full-text location search. Finally, apply `supabase/migrations/202610200001_partial_post_search.sql` to add trigram indexes and the `search_posts` RPC for literal partial-string keyword and location matching. Mock IDs such as `maya` are not backend UUIDs and cannot be passed to live APIs.
+The base schema is in `supabase/migrations/202610120001_backend.sql`; Search uses the backend post APIs when Supabase mode is enabled. Apply `supabase/migrations/202610180001_post_search.sql` after the base schema to add the category/type feed indexes and category-list RPC. Apply `supabase/migrations/202610180002_location_search.sql` next to add indexed full-text location search. Apply `supabase/migrations/202610200001_partial_post_search.sql` to add trigram indexes and the `search_posts` RPC for literal partial-string keyword and location matching. Apply `supabase/migrations/202611180001_post_availability_location_limits.sql` to enforce 60-character maximums on availability and post location for new or updated rows. Apply `supabase/migrations/202611180002_post_category_renames.sql` to rename `Tutoring` and `Academic and Career Help` to `Academic`; `Moving` and `Household Help` to `Household`; and `Handy help` and `Arts & Crafts` to `Creative`. The category migration updates text in place and preserves posts and their other data. Mock IDs such as `maya` are not backend UUIDs and cannot be passed to live APIs.
 
 To deploy to the development project:
 
@@ -64,8 +64,10 @@ To deploy to the development project:
 4. After the base migration is applied, run the post-search migration once in a new SQL Editor query.
 5. Run the location-search migration once in a new SQL Editor query.
 6. Run the partial post-search migration once in a new SQL Editor query.
-7. Confirm Table Editor contains profiles, posts, conversations, conversation_participants, and messages with RLS enabled.
-8. Keep email confirmation enabled. All data access requires an Auth email ending exactly in `@uwaterloo.ca` and a nonnull confirmation timestamp. Other users may exist in Auth, but cannot access app data. A Before User Created hook to reject other domains at registration is not yet deployed.
+7. Run the post-availability/location-limits migration once.
+8. Run the post-category rename migration once against the existing database.
+9. Confirm Table Editor contains profiles, posts, conversations, conversation_participants, and messages with RLS enabled.
+10. Keep email confirmation enabled. All data access requires an Auth email ending exactly in `@uwaterloo.ca` and a nonnull confirmation timestamp. Other users may exist in Auth, but cannot access app data. A Before User Created hook to reject other domains at registration is not yet deployed.
 
 Do not put database admin credentials in this repository or Expo environment. The publishable key cannot run migrations. For future CLI-based deployment, use Supabase CLI login/link and `db push`, tracking applied migrations. If this first migration is applied manually through SQL Editor, reconcile CLI migration history before a later db push to avoid attempting to recreate the tables.
 

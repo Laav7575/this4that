@@ -8,7 +8,7 @@ import { createPost, getPost, updatePost } from '../../services/backend';
 import { getMyUserId } from '../../services/profileData';
 import type { PostInput, PostRow } from '../../types/database';
 
-const categories = ['Tutoring', 'Technology', 'Errands', 'Moving', 'Pets', 'Handy help', 'Other'];
+const categories = ['Academic', 'Technology', 'Errands', 'Household', 'Pets', 'Creative', 'Other'];
 
 type Fields = Omit<PostInput, 'type'>;
 const POST_TITLE_MAX_LENGTH = 80;
@@ -308,9 +308,9 @@ function PostForm({ postId }: { postId?: string }) {
 			/>
 			<CharacterCount value={fields.location} limit={POST_LOCATION_MAX_LENGTH} />
 
-			<View style={styles.privacy}>
+			{/* <View style={styles.privacy}>
 				<Text style={styles.privacyText}>Your exact address stays private until you choose to share it.</Text>
-			</View>
+			</View> */}
 			{error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 			<Button label={postId ? 'Save changes' : `Publish ${type.toLowerCase()}`} onPress={publish} loading={loading} />
 		</Screen>
