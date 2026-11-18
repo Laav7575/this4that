@@ -12,6 +12,8 @@ const categories = ['Tutoring', 'Technology', 'Errands', 'Moving', 'Pets', 'Hand
 
 type Fields = Omit<PostInput, 'type'>;
 const POST_TITLE_MAX_LENGTH = 80;
+const POST_AVAILABILITY_MAX_LENGTH = 60;
+const POST_LOCATION_MAX_LENGTH = 60;
 
 const initialFields: Fields = {
 	title: '',
@@ -20,6 +22,18 @@ const initialFields: Fields = {
 	availability: '',
 	location: '',
 };
+
+function CharacterCount({ value, limit }: { value: string; limit: number }) {
+	const atLimit = value.length >= limit;
+	return (
+		<Text
+			accessibilityLiveRegion="polite"
+			style={[styles.characterCount, atLimit && styles.characterCountWarning]}
+		>
+			{value.length} / {limit} characters{atLimit ? ' · Character limit reached' : ''}
+		</Text>
+	);
+}
 
 export default function NewPost() {
 	const { postId: routePostId } = useLocalSearchParams<{ postId?: string | string[] }>();
@@ -80,6 +94,8 @@ function PostForm({ postId }: { postId?: string }) {
 		title: !fields.title.trim() ? 'Enter a title.' : fields.title.trim().length > POST_TITLE_MAX_LENGTH ? `Use ${POST_TITLE_MAX_LENGTH} characters or fewer.` : undefined,
 		description: !fields.description.trim() ? 'Enter a description.' : fields.description.trim().length > 500 ? 'Use 500 characters or fewer.' : undefined,
 		category: !fields.category.trim() || fields.category === 'Other' ? 'Select or enter a category.' : undefined,
+		availability: fields.availability.length > POST_AVAILABILITY_MAX_LENGTH ? `Use ${POST_AVAILABILITY_MAX_LENGTH} characters or fewer.` : undefined,
+		location: fields.location.length > POST_LOCATION_MAX_LENGTH ? `Use ${POST_LOCATION_MAX_LENGTH} characters or fewer.` : undefined,
 	};
 
 	const update = (key: keyof Fields, value: string) => {
@@ -228,6 +244,7 @@ function PostForm({ postId }: { postId?: string }) {
 				maxLength={POST_TITLE_MAX_LENGTH}
 				error={submitted ? validation.title : undefined}
 			/>
+			<CharacterCount value={fields.title} limit={POST_TITLE_MAX_LENGTH} />
 			<Input
 				label="Description (required)"
 				placeholder="Add useful details, what to bring, and how long it may take..."
@@ -240,6 +257,7 @@ function PostForm({ postId }: { postId?: string }) {
 				style={styles.description}
 				error={submitted ? validation.description : undefined}
 			/>
+			<CharacterCount value={fields.description} limit={500} />
 
 			<View style={styles.fieldGroup}>
 				<Text style={styles.fieldLabel}>Category (required)</Text>
@@ -276,13 +294,19 @@ function PostForm({ postId }: { postId?: string }) {
 				placeholder="Add timing, e.g. Saturday, 1-4 PM"
 				value={fields.availability}
 				onChangeText={value => update('availability', value)}
+				maxLength={POST_AVAILABILITY_MAX_LENGTH}
+				error={submitted ? validation.availability : undefined}
 			/>
+			<CharacterCount value={fields.availability} limit={POST_AVAILABILITY_MAX_LENGTH} />
 			<Input
 				label="Location (optional)"
 				placeholder="Add a neighborhood or meetup spot"
 				value={fields.location}
 				onChangeText={value => update('location', value)}
+				maxLength={POST_LOCATION_MAX_LENGTH}
+				error={submitted ? validation.location : undefined}
 			/>
+			<CharacterCount value={fields.location} limit={POST_LOCATION_MAX_LENGTH} />
 
 			<View style={styles.privacy}>
 				<Text style={styles.privacyText}>Your exact address stays private until you choose to share it.</Text>
@@ -302,6 +326,8 @@ const styles = StyleSheet.create({
 	segmentTextSelected: { color: theme.colors.surface },
 	description: { minHeight: 112, paddingTop: theme.spacing.md },
 	fieldGroup: { gap: theme.spacing.sm },
+	characterCount: { ...theme.typography.caption, color: theme.colors.muted, textAlign: 'right', marginTop: -theme.spacing.md },
+	characterCountWarning: { color: theme.colors.error },
 	fieldLabel: { ...theme.typography.label, color: theme.colors.body },
 	categories: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
 	category: { minHeight: theme.dimensions.touchTarget, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.md, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md, justifyContent: 'center' },

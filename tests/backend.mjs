@@ -20,6 +20,7 @@ await db.exec(await readFile(new URL('../supabase/migrations/202610180001_post_s
 await db.exec(await readFile(new URL('../supabase/migrations/202610180002_location_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202610200001_partial_post_search.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/202611170001_terms_acceptances.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202611180001_post_availability_location_limits.sql', import.meta.url), 'utf8'));
 const a = '00000000-0000-0000-0000-000000000001';
 const b = '00000000-0000-0000-0000-000000000002';
 const outsider = '00000000-0000-0000-0000-000000000003';
@@ -57,6 +58,13 @@ await asUser(b, async () => {
 const post = await asUser(a, async () => {
   const { rows } = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
     values ($1,'Tutoring','Calculus help','Tutoring','Offer','Weekends','Library') returning id`,[a]);
+  await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
+    values ($1,'Long availability','Calculus help','Tutoring','Offer',$2,'Library')`, [a, 'x'.repeat(61)]));
+  await assert.rejects(db.query(`insert into posts(author_id,title,description,category,type,availability,location)
+    values ($1,'Long location','Calculus help','Tutoring','Offer','Weekends',$2)`, [a, 'x'.repeat(61)]));
+  const maxLengthPost = await db.query(`insert into posts(author_id,title,description,category,type,availability,location)
+    values ($1,'Max length','Calculus help','Tutoring','Offer',$2,$2) returning id`, [a, 'x'.repeat(60)]);
+  await db.query('delete from posts where id=$1', [maxLengthPost.rows[0].id]);
   return rows[0].id;
 });
 const olderPost = (await db.query(`insert into posts(author_id,title,description,category,type,availability,location,created_at)
