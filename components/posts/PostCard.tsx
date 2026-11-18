@@ -22,7 +22,7 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
 
   return (
     <Card
-      accessibilityLabel={`${name} is ${isOffer ? 'offering' : 'requesting'}: ${post.title}`}
+      accessibilityLabel={`${post.completed_at ? 'Completed post. ' : ''}${name} is ${isOffer ? 'offering' : 'requesting'}: ${post.title}`}
       onPress={() => router.push({ pathname: '/post/[id]', params: { id: post.id } })}
       style={styles.card}
     >
@@ -33,7 +33,7 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
           <Text style={styles.meta}>{post.location} · {timeAgo(post.created_at)}</Text>
         </View>
         <View style={[styles.typeChip, isOffer ? styles.offerChip : styles.requestChip]}>
-          <Text style={styles.typeChipText}>{isOffer ? 'Offering' : 'Requesting'}</Text>
+          <Text style={styles.typeChipText}>{post.completed_at ? 'Completed' : isOffer ? 'Offering' : 'Requesting'}</Text>
         </View>
       </View>
       <Text style={styles.postTitle}>{post.title}</Text>
@@ -62,7 +62,7 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
         <View style={styles.tag}><Text style={styles.tagText}>{post.category}</Text></View>
         <View style={styles.tag}><Text style={styles.tagText}>{post.availability}</Text></View>
       </View>
-      {footer}
+      {!post.completed_at && footer}
     </Card>
   );
 }

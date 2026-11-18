@@ -7,9 +7,9 @@ import { ChatView } from '../../components/messaging/ChatView';
 import { ChatNavigation, HeaderIcon } from '../../components/messaging/Navigation';
 import { Button } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { getMessages, sendMessage } from '../../services/backend';
+import { getMessages, sendMessage, setConversationClosed, setPostCompleted } from '../../services/backend';
 import { getEarlierMessages, loadChatDetails, markConversationRead, mergeMessages, messagingUser } from '../../services/messaging';
-import type { MessageRow, PostRow, ProfileRow } from '../../types/database';
+import type { ConversationRow, MessageRow, PostRow, ProfileRow } from '../../types/database';
 
 export default function ChatRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,6 +17,8 @@ export default function ChatRoute() {
 }
 function Chat({ id }: { id: string }) {
   const headerHeight = useHeaderHeight();
+  const [conversation, setConversation] = useState<ConversationRow | null>(null);
+  const statusRevision = useRef(0);
   const [person, setPerson] = useState<ProfileRow | null>(null);
   const [post, setPost] = useState<PostRow | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
@@ -44,11 +46,12 @@ function Chat({ id }: { id: string }) {
       try {
         const me = await messagingUser();
         if (!id) throw new Error('No conversation was selected.');
-        if (initial) {
-          const details = await loadChatDetails(id, me);
-          if (!active) return;
-          setPerson(details.person); setPost(details.post); setUserId(me);
-        }
+        const version = statusRevision.current;
+        const details = await loadChatDetails(id, me);
+        if (!active) return;
+        setPerson(details.person); setUserId(me);
+        if (version === statusRevision.current) setPost(details.post);
+        if (version === statusRevision.current) setConversation(details.conversation);
         const history = await getMessages(id, 0, 50);
         if (!active) return;
         setMessages(current => mergeMessages(current, history));
@@ -67,7 +70,7 @@ function Chat({ id }: { id: string }) {
   }, [id, revision]));
   const send = async () => {
     const content = draft.trim();
-    if (!content || sendingRef.current || !ready) return;
+    if (!content || sendingRef.current || !ready || conversation?.closed_at) return;
     sendingRef.current = true; setSending(true); setSendError('');
     try {
       const message = await sendMessage(id, content);
@@ -92,6 +95,20 @@ function Chat({ id }: { id: string }) {
         !ready ? <View style={{ padding: 24, gap: 16 }}><Text accessibilityRole="alert" style={{ ...theme.typography.body, color: theme.colors.error }}>{error}</Text>
           <Button label="Try again" onPress={() => setRevision(n => n + 1)} /><Button label="Back to messages" variant="secondary" onPress={() => router.dismissTo('/messages')} /></View> :
           <ChatView person={person} post={post} messages={messages} userId={userId} draft={draft} onDraft={setDraft} sending={sending}
+            onChangeCompleted={async completed => {
+              if (!post) throw new Error('This post is no longer available.');
+              statusRevision.current += 1;
+              try {
+                const updated = await setPostCompleted(post.id, completed);
+                if (mounted.current) setPost(current => current?.id === updated.id ? updated : current);
+              } finally { statusRevision.current += 1; }
+            }}
+            closed={!!conversation?.closed_at} onChangeClosed={async closed => {
+              statusRevision.current += 1;
+              const updated = await setConversationClosed(id, closed);
+              statusRevision.current += 1;
+              if (mounted.current) { setConversation(updated); setSendError(''); }
+            }}
             error={sendError || error} onSend={() => { void send(); }} onRefresh={() => setRevision(n => n + 1)}
             onProfile={() => { if (person) router.push({ pathname: '/user/[id]', params: { id: person.id } }); }}
             onPost={() => { if (post) router.push({ pathname: '/post/[id]', params: { id: post.id } }); }}

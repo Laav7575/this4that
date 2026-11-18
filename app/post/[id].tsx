@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { getPost, getProfile } from '../../services/backend';
+import { getPost, getProfile, setPostCompleted } from '../../services/backend';
 import type { PostRow, ProfileRow } from '../../types/database';
+
+import { getMyUserId } from '../../services/profileData';
+import { ConfirmAction } from '../../components/ui/ConfirmAction';
 
 type Status = 'loading' | 'ready' | 'missing' | 'error';
 const DESCRIPTION_PREVIEW_LINES = 4;
@@ -65,6 +68,7 @@ export default function PostDetails() {
     author: ProfileRow | null;
     error: string;
   }>({ id: '', status: 'loading', post: null, author: null, error: '' });
+  const [userId, setUserId] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const isCurrentPost = loaded.id === postId;
   const status: Status = !postId ? 'missing' : isCurrentPost ? loaded.status : 'loading';
@@ -72,7 +76,7 @@ export default function PostDetails() {
   const author = isCurrentPost ? loaded.author : null;
   const error = isCurrentPost ? loaded.error : '';
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     if (!postId) return () => { active = false; };
 
@@ -84,8 +88,9 @@ export default function PostDetails() {
           setLoaded({ id: postId, status: 'missing', post: null, author: null, error: '' });
           return;
         }
-        const profile = await getProfile(result.author_id);
+        const [profile, me] = await Promise.all([getProfile(result.author_id), getMyUserId()]);
         if (!active) return;
+        setUserId(me);
         setLoaded({ id: postId, status: 'ready', post: result, author: profile, error: '' });
       } catch (cause) {
         if (!active) return;
@@ -101,7 +106,7 @@ export default function PostDetails() {
 
     void load();
     return () => { active = false; };
-  }, [postId, retry]);
+  }, [postId, retry]));
 
   if (status === 'loading') {
     return <Screen><ActivityIndicator accessibilityLabel="Loading post" /></Screen>;
@@ -132,7 +137,7 @@ export default function PostDetails() {
       <Card>
         <View style={styles.topline}>
           <Text style={[styles.badge, isOffer ? styles.offerBadge : styles.requestBadge]}>
-            {isOffer ? 'Offering' : 'Requesting'}
+            {post.completed_at ? 'Completed' : 'Active · ' + (isOffer ? 'Offering' : 'Requesting')}
           </Text>
           <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
         </View>
@@ -164,7 +169,17 @@ export default function PostDetails() {
         </Pressable>
       </View>
 
-      <MessageAuthorButton key={post.id} authorId={post.author_id} postId={post.id} />
+      {post.completed_at && <Text style={styles.body}>This post has been marked fulfilled by its owner.</Text>}
+      {userId === post.author_id ? <ConfirmAction
+        label={post.completed_at ? 'Reopen post' : 'Mark as complete'}
+        description={post.completed_at
+          ? 'This post will be active again. Your conversations will keep their current status.'
+          : 'Mark this post as fulfilled. It will stay visible as completed. This does not close any conversations, and you can reopen the post later.'}
+        onConfirm={async () => {
+          const updated = await setPostCompleted(post.id, !post.completed_at);
+          setLoaded(current => current.id === updated.id ? { ...current, post: updated } : current);
+        }} /> : !post.completed_at && <MessageAuthorButton key={post.id} authorId={post.author_id} postId={post.id} />}
+
     </Screen>
   );
 }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
+import { ConfirmAction } from '../ui/ConfirmAction';
 import { Avatar, Button } from '../ui';
 import { HeaderIcon } from './Navigation';
 import { MessageBubble } from './MessageBubble';
@@ -8,8 +9,10 @@ import { theme } from '../../constants/theme';
 import { messageDay } from '../../services/messaging';
 import type { MessageRow, PostRow, ProfileRow } from '../../types/database';
 
-export function ChatView({ person, post, messages, userId, draft, onDraft, onSend, sending, error,
+export function ChatView({ person, post, messages, userId, draft, onDraft, onSend, sending, error, closed, onChangeClosed, onChangeCompleted,
   onProfile, onPost, onOpenPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
+  onChangeCompleted: (completed: boolean) => Promise<void>;
+  closed: boolean; onChangeClosed: (closed: boolean) => Promise<void>;
   person: ProfileRow | null; post: PostRow | null; messages: MessageRow[]; userId: string;
   draft: string; onDraft: (value: string) => void; onSend: () => void; sending: boolean; error: string;
   onProfile: () => void; onPost: () => void; onOpenPost: (postId: string) => void; onRefresh: () => void;
@@ -31,10 +34,29 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
       <HeaderIcon icon="more" label="Conversation options" onPress={() => setMenu('options')} style={styles.optionsButton} />
     </View>
     {!!post && <Pressable accessibilityRole="button" accessibilityLabel={`View exchange: ${post.title}`} onPress={onPost} style={styles.context}>
-      <Text style={styles.eyebrow}>ABOUT THIS EXCHANGE</Text>
+      <Text style={styles.eyebrow}>{post.completed_at ? 'POST COMPLETED' : 'ACTIVE POST'}</Text>
       <Text numberOfLines={2} style={styles.contextTitle}>{post.title}</Text>
       <Text numberOfLines={2} style={styles.caption}>{post.availability} · {post.location}</Text>
     </Pressable>}
+    <View style={styles.statusRow}>
+      <Text style={styles.caption}>{closed ? 'Conversation closed · History saved' : 'Active conversation'}</Text>
+      <View style={styles.actionRow}>
+        {!!post && post.author_id === userId && <View style={styles.actionItem}>
+          <ConfirmAction compact variant={post.completed_at ? 'secondary' : 'primary'} label={post.completed_at ? 'Reopen post' : 'Mark as complete'}
+            description={post.completed_at
+              ? `Make “${post.title}” active again. The conversation status will stay unchanged.`
+              : `Mark “${post.title}” as fulfilled. You can keep chatting and reopen the post later.`}
+            onConfirm={() => onChangeCompleted(!post.completed_at)} />
+        </View>}
+        <View style={styles.actionItem}>
+          <ConfirmAction compact label={closed ? 'Reopen conversation' : 'Close conversation'} disabled={sending}
+            description={closed
+              ? 'Both students will be able to send messages again. Post completion stays unchanged.'
+              : 'Pause messages for both students. History and your draft are kept, and either student can reopen. This does not complete any posts.'}
+            onConfirm={() => onChangeClosed(!closed)} />
+        </View>
+      </View>
+    </View>
     <ScrollView ref={scroll} style={styles.thread} contentContainerStyle={styles.threadContent} keyboardShouldPersistTaps="handled"
       scrollEventThrottle={100} onScroll={event => {
         const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -52,7 +74,7 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
       </View>)}
     </ScrollView>
     {!!error && <View style={styles.errorRow}><Text accessibilityRole="alert" style={styles.error}>{error}</Text></View>}
-    <View style={styles.composerOuter}>
+    {closed ? <Text style={styles.closedNote}>Reopen this conversation to send a message.</Text> : <View style={styles.composerOuter}>
       <View style={styles.composer}>
         <Pressable accessibilityRole="button" accessibilityLabel="Message suggestions" onPress={() => setMenu('suggestions')} style={styles.add}>
           <Image source={require('../../assets/icons/messaging/add.svg')} style={{ width: 24, height: 24 }} contentFit="contain" />
@@ -78,6 +100,7 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
       </View>
       {draft.length > 4500 && <Text style={styles.counter}>{draft.length}/5000</Text>}
     </View>
+    }
     <Modal transparent visible={menu !== null} animationType="fade" onRequestClose={() => setMenu(null)}>
       <View style={styles.modalBackdrop}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Close conversation menu" onPress={() => setMenu(null)} />
@@ -97,6 +120,10 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
 }
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%', maxWidth: theme.dimensions.contentMaxWidth, alignSelf: 'center', minHeight: 0 },
+  actionRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  actionItem: { flex: 1, minWidth: 0 },
+  statusRow: { marginHorizontal: 16, marginVertical: 8, gap: 8 },
+  closedNote: { ...theme.typography.body, color: theme.colors.muted, padding: 16, textAlign: 'center' },
   personRow: { flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 24, gap: 4 },
   // Pull the 44px target out so the icon itself lines up with the card and composer edges (16px).
   optionsButton: { marginHorizontal: 0, marginRight: -10 },

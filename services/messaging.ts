@@ -32,7 +32,7 @@ export async function loadInbox(userId: string, offset: number, limit = 20): Pro
     return { conversation, person, latest, unread: !!latest && latest.sender_id !== userId && (!readAt || Date.parse(latest.timestamp) > Date.parse(readAt)) };
   }));
 }
-export async function loadChatDetails(id: string, userId: string): Promise<{ person: ProfileRow | null; post: PostRow | null }> {
+export async function loadChatDetails(id: string, userId: string): Promise<{ person: ProfileRow | null; post: PostRow | null; conversation: ConversationRow }> {
   const { data: conversation, error } = DEMO ? { data: await demo.getConversation(id), error: null }
     : await getSupabase().from('conversations').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
@@ -43,7 +43,7 @@ export async function loadChatDetails(id: string, userId: string): Promise<{ per
     other ? getProfile(other.user_id) : Promise.resolve(null),
     conversation.related_post_id ? getPost(conversation.related_post_id) : Promise.resolve(null),
   ]);
-  return { person, post };
+  return { person, post, conversation };
 }
 export function mergeMessages(existing: MessageRow[], incoming: MessageRow[]) {
   return [...new Map([...existing, ...incoming].map(m => [m.id, m])).values()]

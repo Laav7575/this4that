@@ -125,3 +125,16 @@ export async function sendMessage(conversationId: string, content: string) {
   if (error) throw error;
   return data;
 }
+
+export async function setPostCompleted(id: string, completed: boolean) {
+  if (DEMO) return demo.setPostCompleted(id, completed);
+  const { data, error } = await getSupabase().rpc('set_post_completed', { target_id: id, completed });
+  if (error) throw error;
+  return data;
+}
+export async function setConversationClosed(id: string, closed: boolean) {
+  if (DEMO) return demo.setConversationClosed(id, closed);
+  const { data, error } = await getSupabase().rpc('set_conversation_closed', { target_id: id, closed });
+  if (error) throw error;
+  return data;
+}
