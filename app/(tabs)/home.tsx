@@ -25,8 +25,6 @@ import type { PostRow } from '../../types/database';
 
 
 const searchIcon = require('../../assets/icons/search.svg');
-const messagesIcon = require('../../assets/icons/messages.svg');
-const profileIcon = require('../../assets/icons/profile.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
@@ -290,40 +288,12 @@ export default function Home() {
     }, []),
   );
 
-  // Keep post creation, messaging, and profile actions in the Home header.
+  // Messages and Profile are available in the bottom tabs.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
       headerTitleAlign: 'center',
-      headerRight: () => (
-        <View style={styles.headerActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Messages"
-            onPress={() => router.push('/messages')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={messagesIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="My profile"
-            onPress={() => router.push('/profile')}
-            style={styles.headerButton}
-          >
-            <Image
-              source={profileIcon}
-              contentFit="contain"
-              style={styles.headerIcon}
-            />
-          </Pressable>
-          <AddPostButton />
-        </View>
-      ),
+      headerRight: () => <AddPostButton />,
     });
   }, [navigation]);
 
@@ -534,21 +504,6 @@ const styles = StyleSheet.create({
     flexBasis: '33.3333%',
     maxWidth: '33.3333%',
     paddingHorizontal: theme.spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerButton: {
-    minWidth: theme.dimensions.touchTarget,
-    minHeight: theme.dimensions.touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    tintColor: theme.colors.text,
   },
   filterTopRow: {
     flexDirection: 'row',
