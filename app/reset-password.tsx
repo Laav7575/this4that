@@ -60,7 +60,7 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await updatePassword(password);
-      router.replace('/home'); // the recovery session is already signed in
+      router.replace('/login'); // The root layout resumes onboarding with the recovery session.
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Could not update your password. Try again.');
     } finally {

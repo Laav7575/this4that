@@ -6,12 +6,14 @@ export type ParticipantRow = { conversation_id: string; user_id: string }
 export type MessageRow = { id: string; conversation_id: string; sender_id: string; content: string; timestamp: string;
   /** Set on exchange notices: the post this part of the conversation is about. */
   post_id?: string | null }
+type TermsAcceptanceRow = { user_id: string; terms_version: string; accepted_at: string };
 type Table<Row, Insert, Update> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
 export type ProfileInput = Pick<ProfileRow, 'name'> & Partial<Omit<ProfileRow, 'id' | 'name' | 'created_at'>>;
 export type PostInput = Omit<PostRow, 'id' | 'author_id' | 'created_at' | 'search_document' | 'completed_at'>;
 export interface Database {
   public: {
     Tables: {
+      terms_acceptances: Table<TermsAcceptanceRow, Pick<TermsAcceptanceRow, 'user_id' | 'terms_version'>, never>;
       profiles: Table<ProfileRow, ProfileInput & { id: string }, Partial<ProfileInput>>;
       posts: Table<PostRow, PostInput & { author_id: string }, Partial<PostInput>>;
       conversations: Table<ConversationRow, never, never>;

@@ -29,18 +29,18 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
       <View style={styles.cardHeader}>
         <Avatar name={name} />
         <View style={styles.cardWho}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.meta}>{post.location} · {timeAgo(post.created_at)}</Text>
+          <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
+          <Text style={styles.meta} numberOfLines={2} ellipsizeMode="tail">{post.location} · {timeAgo(post.created_at)}</Text>
         </View>
         <View style={[styles.typeChip, isOffer ? styles.offerChip : styles.requestChip]}>
           <Text style={styles.typeChipText}>{post.completed_at ? 'Completed' : isOffer ? 'Offering' : 'Requesting'}</Text>
         </View>
       </View>
-      <Text style={styles.postTitle}>{post.title}</Text>
+      <Text style={styles.postTitle} numberOfLines={2} ellipsizeMode="tail">{post.title}</Text>
       <View style={styles.descriptionPreview}>
-        <Text style={styles.postBody} numberOfLines={PREVIEW_LINES}>{post.description}</Text>
+        <Text style={styles.postBody} numberOfLines={PREVIEW_LINES} ellipsizeMode="tail">{post.description}</Text>
         {descriptionOverflows ? (
-          <Text style={styles.seeMore} numberOfLines={1}>… see more</Text>
+          <Text style={styles.seeMore} numberOfLines={1}>... Show more</Text>
         ) : null}
         <View
           accessibilityElementsHidden
@@ -59,21 +59,22 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
         </View>
       </View>
       <View style={styles.tags}>
-        <View style={styles.tag}><Text style={styles.tagText}>{post.category}</Text></View>
-        <View style={styles.tag}><Text style={styles.tagText}>{post.availability}</Text></View>
+        <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.category}</Text></View>
+        <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.availability}</Text></View>
       </View>
-      {!post.completed_at && footer}
+      {!post.completed_at && footer ? <View style={styles.footer}>{footer}</View> : null}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: theme.spacing.sm, flexGrow: 1 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
-  cardWho: { flex: 1 },
+  card: { gap: theme.spacing.sm, flexGrow: 1, minWidth: 0 },
+  footer: { marginTop: 'auto' },
+  cardHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: theme.spacing.md },
+  cardWho: { flex: 1, minWidth: 100 },
   name: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text },
   meta: { ...theme.typography.caption, color: theme.colors.muted },
-  typeChip: { borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
+  typeChip: { flexShrink: 0, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   requestChip: { backgroundColor: theme.colors.secondary },
   offerChip: { backgroundColor: theme.colors.primary },
   typeChipText: { ...theme.typography.label, color: theme.colors.text },
@@ -83,6 +84,6 @@ const styles = StyleSheet.create({
   descriptionMeasure: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0 },
   seeMore: { ...theme.typography.caption, color: theme.colors.muted, backgroundColor: theme.colors.surface, position: 'absolute', right: 0, bottom: 0, paddingLeft: theme.spacing.xs },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  tag: { borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
+  tag: { maxWidth: '100%', borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   tagText: { ...theme.typography.caption, color: theme.colors.body },
 });

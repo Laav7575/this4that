@@ -61,7 +61,8 @@ export function InboxView({ items, userId, loading, error, onRefresh, onOpen, on
         {(!query && !unreadOnly && status === 'all') && <Button label="Explore services" onPress={onExplore} />}
       </>}
     </View>}
-    ListFooterComponent={<Text style={styles.footer}>Connect. Exchange. Help each other out.</Text>} />;
+    // ListFooterComponent={<Text style={styles.footer}>Connect. Exchange. Help each other out.</Text>}
+    />;
 }
 const styles = StyleSheet.create({
   list: { flex: 1, width: '100%', maxWidth: theme.dimensions.contentMaxWidth, alignSelf: 'center', backgroundColor: theme.colors.background },

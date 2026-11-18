@@ -11,7 +11,7 @@
 
 ## Deployment
 
-Apply `supabase/migrations/202611170001_completion_states.sql` after the existing migrations, including `202610230001_conversation_latest_post.sql`, before using these controls against hosted Supabase. It adds nullable timestamps (existing rows remain active), owner/participant-authorized RPCs, and a trigger that rejects user messages to a closed chat. It does not delete history. The migration has only been tested locally, not applied to hosted Supabase.
+Apply `supabase/migrations/202611180003_completion_states.sql` after the existing migrations, including `202610230001_conversation_latest_post.sql`, before using these controls against hosted Supabase. It adds nullable timestamps (existing rows remain active), owner/participant-authorized RPCs, and a trigger that rejects user messages to a closed chat. It does not delete history. The migration has only been tested locally, not applied to hosted Supabase.
 
 Demo mode implements the same states in memory. Use My Profile → Baking help for a study break to test your own post, Messages → Maya to complete your own post directly in chat, and Messages → Jordan to test chat closure. Reloading resets demo data.
 

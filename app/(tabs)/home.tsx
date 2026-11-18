@@ -1,7 +1,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
-import * as Device from 'expo-device';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -10,7 +9,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
@@ -24,6 +25,8 @@ import type { PostRow } from '../../types/database';
 
 
 const searchIcon = require('../../assets/icons/search.svg');
+const messagesIcon = require('../../assets/icons/messages.svg');
+const profileIcon = require('../../assets/icons/profile.svg');
 const PAGE_SIZE = 50;
 
 type Status = 'loading' | 'ready' | 'signedout' | 'error';
@@ -34,9 +37,6 @@ const DATE_FILTERS = [
   { value: 'month', label: 'Past month' },
 ] as const;
 type DateFilter = typeof DATE_FILTERS[number]['value'];
-
-// expo-device reports the kind of device: PHONE, TABLET, DESKTOP, and so on.
-const isPhone = Device.deviceType === Device.DeviceType.PHONE;
 
 const typeOptions = [
   { value: 'All', label: 'All' },
@@ -94,13 +94,15 @@ function FilterRow({
 
 export default function Home() {
   const navigation = useNavigation();
-  const columns = isPhone ? 1 : 3;
+  const { width } = useWindowDimensions();
+  // Narrow desktop windows and phones both need readable, full-width cards.
+  const columns = width >= 1024 ? 3 : 1;
 
   const [category, setCategory] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryOptions, setCategoryOptions] = useState([{ value: 'All', label: 'All categories' }]);
   const [categoryError, setCategoryError] = useState('');
-  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -288,7 +290,7 @@ export default function Home() {
     }, []),
   );
 
-  // Keep search alongside the shared Add Post header action.
+  // Keep post creation, messaging, and profile actions in the Home header.
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'This4That',
@@ -297,21 +299,24 @@ export default function Home() {
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={searchExpanded ? 'Close search' : 'Search posts'}
-            accessibilityState={{ expanded: searchExpanded }}
-            onPress={() => {
-              if (searchExpanded) {
-                setQuery('');
-                setLocation('');
-                setDateFilter('any');
-                setDateOptionsOpen(false);
-              }
-              setSearchExpanded(open => !open);
-            }}
+            accessibilityLabel="Messages"
+            onPress={() => router.push('/messages')}
             style={styles.headerButton}
           >
             <Image
-              source={searchIcon}
+              source={messagesIcon}
+              contentFit="contain"
+              style={styles.headerIcon}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="My profile"
+            onPress={() => router.push('/profile')}
+            style={styles.headerButton}
+          >
+            <Image
+              source={profileIcon}
               contentFit="contain"
               style={styles.headerIcon}
             />
@@ -320,7 +325,7 @@ export default function Home() {
         </View>
       ),
     });
-  }, [navigation, searchExpanded]);
+  }, [navigation]);
 
   return (
     <View style={styles.fill}>
@@ -354,7 +359,31 @@ export default function Home() {
         ]}
         ListHeaderComponent={
           <View style={styles.listHeader}>
-            <Text style={styles.filterHeading}>FILTERS</Text>
+            <View style={styles.filterTopRow}>
+              <Text style={styles.filterHeading}>FILTERS</Text>
+              <View style={styles.searchField}>
+                <Image source={searchIcon} contentFit="contain" style={styles.searchFieldIcon} />
+                <TextInput
+                  placeholder="Search posts"
+                  accessibilityLabel="Search posts"
+                  value={query}
+                  onChangeText={setQuery}
+                  returnKeyType="search"
+                  placeholderTextColor={theme.colors.muted}
+                  style={styles.searchInput}
+                />
+                {query ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear search"
+                    onPress={() => setQuery('')}
+                    style={styles.clearSearch}
+                  >
+                    <Text style={styles.clearSearchText}>×</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
             <FilterRow
               options={typeOptions}
               selected={typeFilter}
@@ -366,15 +395,22 @@ export default function Home() {
               onSelect={setCategory}
             />
             {categoryError ? <Text style={styles.filterError}>{categoryError}</Text> : null}
-            {searchExpanded ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={advancedFiltersExpanded ? 'Hide additional filters' : 'Show additional filters'}
+              accessibilityState={{ expanded: advancedFiltersExpanded }}
+              onPress={() => setAdvancedFiltersExpanded(open => !open)}
+              style={styles.moreFiltersButton}
+            >
+              <Text style={styles.moreFiltersText}>
+                {advancedFiltersExpanded ? 'Fewer filters' : `More filters${location.trim() || dateFilter !== 'any' ? ' · active' : ''}`}
+              </Text>
+              <Text style={styles.moreFiltersIcon} accessibilityElementsHidden importantForAccessibility="no">
+                {advancedFiltersExpanded ? '−' : '+'}
+              </Text>
+            </Pressable>
+            {advancedFiltersExpanded ? (
               <View style={styles.searchPanel}>
-                <Input
-                  placeholder="Search keywords"
-                  accessibilityLabel="Search keywords"
-                  value={query}
-                  onChangeText={setQuery}
-                  returnKeyType="search"
-                />
                 <Input
                   label="Location"
                   placeholder="Any location"
@@ -514,9 +550,71 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: theme.colors.text,
   },
+  filterTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  searchField: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: theme.dimensions.touchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
+  },
+  searchFieldIcon: {
+    width: 18,
+    height: 18,
+    tintColor: theme.colors.muted,
+  },
+  searchInput: {
+    ...theme.typography.body,
+    flex: 1,
+    minWidth: 0,
+    minHeight: theme.dimensions.touchTarget - 2,
+    padding: 0,
+    paddingLeft: theme.spacing.sm,
+    color: theme.colors.text,
+  },
+  clearSearch: {
+    width: theme.dimensions.touchTarget,
+    height: theme.dimensions.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearSearchText: {
+    color: theme.colors.muted,
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  moreFiltersButton: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.subtle,
+  },
+  moreFiltersText: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+  },
+  moreFiltersIcon: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 18,
+  },
   filters: {
     gap: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
   },
   filterScroll: {
     flexGrow: 0,
@@ -535,11 +633,10 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
   },
   searchPanel: {
-    gap: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   dateGroup: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   fieldLabel: {
     ...theme.typography.label,

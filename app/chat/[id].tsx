@@ -94,7 +94,7 @@ function Chat({ id }: { id: string }) {
       {loading && !ready ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator color={theme.colors.primary} accessibilityLabel="Loading conversation" /></View> :
         !ready ? <View style={{ padding: 24, gap: 16 }}><Text accessibilityRole="alert" style={{ ...theme.typography.body, color: theme.colors.error }}>{error}</Text>
           <Button label="Try again" onPress={() => setRevision(n => n + 1)} /><Button label="Back to messages" variant="secondary" onPress={() => router.dismissTo('/messages')} /></View> :
-          <ChatView person={person} post={post} messages={messages} userId={userId} draft={draft} onDraft={setDraft} sending={sending}
+          <ChatView conversationId={id} person={person} post={post} messages={messages} userId={userId} draft={draft} onDraft={setDraft} sending={sending}
             onChangeCompleted={async completed => {
               if (!post) throw new Error('This post is no longer available.');
               statusRevision.current += 1;

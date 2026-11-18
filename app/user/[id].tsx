@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { ProfileView } from '../../components/profile/ProfileView';
 import { ProfileStatus } from '../../components/profile/ProfileStatus';
+import { ReportDialog } from '../../components/reports/ReportDialog';
 import { useProfile } from '../../components/profile/useProfile';
 import { theme } from '../../constants/theme';
 import { createConversation } from '../../services/backend';
@@ -16,6 +17,7 @@ export default function PublicProfile() {
   const [myId, setMyId] = useState<string | null>(null);
   const [messaging, setMessaging] = useState(false);
   const [error, setError] = useState<string>();
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => { getMyUserId().then(setMyId).catch(() => setMyId(null)); }, []);
 
@@ -49,8 +51,31 @@ export default function PublicProfile() {
           isSelf={!!myId && myId === id}
           onMessage={message}
           messageLoading={messaging}
+          footer={
+            myId && myId !== id ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Report ${state.profile.name}`}
+                onPress={() => setReporting(true)}
+                style={{ minHeight: theme.dimensions.touchTarget, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={[theme.typography.caption, { color: theme.colors.muted, textDecorationLine: 'underline' }]}>
+                  Report profile
+                </Text>
+              </Pressable>
+            ) : undefined
+          }
         />
       )}
+      {state.status === 'ready' && id ? (
+        <ReportDialog
+          visible={reporting}
+          onClose={() => setReporting(false)}
+          context="profile"
+          reportedUserId={id}
+          reportedName={state.profile.name}
+        />
+      ) : null}
       {error && (
         <Text
           accessibilityRole="alert"

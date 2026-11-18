@@ -85,11 +85,13 @@ export async function createPost(input: PostInput) {
   return data;
 }
 export async function updatePost(id: string, input: Partial<PostInput>) {
+  if (DEMO) return demo.updatePost(id, input);
   const { data, error } = await getSupabase().from('posts').update(input).eq('id', id).eq('author_id', await userId()).select().single();
   if (error) throw error;
   return data;
 }
 export async function deletePost(id: string) {
+  if (DEMO) return demo.deletePost(id);
   const { data, error } = await getSupabase().from('posts').delete().eq('id', id).eq('author_id', await userId()).select('id').single();
   if (error) throw error;
   return data;

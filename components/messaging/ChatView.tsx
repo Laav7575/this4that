@@ -4,16 +4,17 @@ import { Image } from 'expo-image';
 import { ConfirmAction } from '../ui/ConfirmAction';
 import { Avatar, Button } from '../ui';
 import { HeaderIcon } from './Navigation';
+import { ReportDialog } from '../reports/ReportDialog';
 import { MessageBubble } from './MessageBubble';
 import { theme } from '../../constants/theme';
 import { messageDay } from '../../services/messaging';
 import type { MessageRow, PostRow, ProfileRow } from '../../types/database';
 
-export function ChatView({ person, post, messages, userId, draft, onDraft, onSend, sending, error, closed, onChangeClosed, onChangeCompleted,
+export function ChatView({ conversationId, person, post, messages, userId, draft, onDraft, onSend, sending, error, closed, onChangeClosed, onChangeCompleted,
   onProfile, onPost, onOpenPost, onRefresh, hasOlder, loadingOlder, onOlder }: {
   onChangeCompleted: (completed: boolean) => Promise<void>;
   closed: boolean; onChangeClosed: (closed: boolean) => Promise<void>;
-  person: ProfileRow | null; post: PostRow | null; messages: MessageRow[]; userId: string;
+  conversationId: string; person: ProfileRow | null; post: PostRow | null; messages: MessageRow[]; userId: string;
   draft: string; onDraft: (value: string) => void; onSend: () => void; sending: boolean; error: string;
   onProfile: () => void; onPost: () => void; onOpenPost: (postId: string) => void; onRefresh: () => void;
   hasOlder: boolean; loadingOlder: boolean; onOlder: () => void;
@@ -22,6 +23,7 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
   const nearBottom = useRef(true);
   const lastMessage = useRef<string | undefined>(undefined);
   const [menu, setMenu] = useState<'options' | 'suggestions' | null>(null);
+  const [reporting, setReporting] = useState(false);
   const latest = messages.at(-1);
   return <View style={styles.container}>
     <View style={styles.personRow}>
@@ -111,11 +113,15 @@ export function ChatView({ person, post, messages, userId, draft, onDraft, onSen
               onPress={() => { onDraft(draft ? `${draft}\n${suggestion}`.slice(0, 5000) : suggestion); setMenu(null); }} />) : <>
             {!!person && <Button label="View profile" variant="secondary" onPress={() => { setMenu(null); onProfile(); }} />}
             <Button label="Refresh conversation" variant="secondary" onPress={() => { setMenu(null); onRefresh(); }} />
+            {!!person && <Button label="Report" variant="secondary"
+              onPress={() => { setMenu(null); setTimeout(() => setReporting(true), 300); }} />}
           </>}
           <Button label="Close" onPress={() => setMenu(null)} />
         </View>
       </View>
     </Modal>
+    {!!person && <ReportDialog visible={reporting} onClose={() => setReporting(false)} context="message"
+      reportedUserId={person.id} reportedName={person.name} conversationId={conversationId} />}
   </View>;
 }
 const styles = StyleSheet.create({
