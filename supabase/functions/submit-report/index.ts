@@ -167,7 +167,6 @@ Deno.serve(async req => {
     sent.set(dedupeKey, Date.now());
   } catch (error) {
     console.error('submit-report: email failed', error);
-    console.error('smtp config seen', { host, port, user, passLength: pass.length });
     return reply(502, { error: 'Could not send your report. Please try again.' });
   }
   return reply(200, { ok: true });
