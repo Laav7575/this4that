@@ -6,7 +6,6 @@ import { Screen } from '../components/Screen';
 import { Button, Input } from '../components/ui';
 import { theme } from '../constants/theme';
 import { requestPasswordReset, signIn, signUp } from '../services/auth';
-import { createMyProfile, getProfile } from '../services/backend';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -58,13 +57,7 @@ export default function Login() {
         setPassword('');
         setNotice('Check your inbox and spam or junk to confirm your account, then sign in.');
       } else {
-        const { user } = await signIn(email, password);
-        // First confirmed sign-in: create the public profile row the feed needs for author names.
-        if (!(await getProfile(user.id))) {
-          const savedName = typeof user.user_metadata?.name === 'string' ? user.user_metadata.name : '';
-          await createMyProfile({ name: savedName || email.split('@')[0] });
-        }
-        // No manual redirect needed: the root layout sends signed-in users to Home.
+        await signIn(email, password);
       }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Something went wrong. Try again.');
