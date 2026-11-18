@@ -91,7 +91,7 @@ function Chat({ id }: { id: string }) {
       {loading && !ready ? <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator color={theme.colors.primary} accessibilityLabel="Loading conversation" /></View> :
         !ready ? <View style={{ padding: 24, gap: 16 }}><Text accessibilityRole="alert" style={{ ...theme.typography.body, color: theme.colors.error }}>{error}</Text>
           <Button label="Try again" onPress={() => setRevision(n => n + 1)} /><Button label="Back to messages" variant="secondary" onPress={() => router.dismissTo('/messages')} /></View> :
-          <ChatView person={person} post={post} messages={messages} userId={userId} draft={draft} onDraft={setDraft} sending={sending}
+          <ChatView conversationId={id} person={person} post={post} messages={messages} userId={userId} draft={draft} onDraft={setDraft} sending={sending}
             error={sendError || error} onSend={() => { void send(); }} onRefresh={() => setRevision(n => n + 1)}
             onProfile={() => { if (person) router.push({ pathname: '/user/[id]', params: { id: person.id } }); }}
             onPost={() => { if (post) router.push({ pathname: '/post/[id]', params: { id: post.id } }); }}
