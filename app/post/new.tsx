@@ -80,8 +80,6 @@ function PostForm({ postId }: { postId?: string }) {
 		title: !fields.title.trim() ? 'Enter a title.' : fields.title.trim().length > POST_TITLE_MAX_LENGTH ? `Use ${POST_TITLE_MAX_LENGTH} characters or fewer.` : undefined,
 		description: !fields.description.trim() ? 'Enter a description.' : fields.description.trim().length > 500 ? 'Use 500 characters or fewer.' : undefined,
 		category: !fields.category.trim() || fields.category === 'Other' ? 'Select or enter a category.' : undefined,
-		availability: !fields.availability.trim() ? 'Add when you are available.' : undefined,
-		location: !fields.location.trim() ? 'Add a neighborhood or meetup spot.' : undefined,
 	};
 
 	const update = (key: keyof Fields, value: string) => {
@@ -165,10 +163,18 @@ function PostForm({ postId }: { postId?: string }) {
 					<Text style={styles.postTitle}>{createdPost.title}</Text>
 					<Text style={styles.body}>{createdPost.description}</Text>
 					<View style={styles.rule} />
-					<Text style={styles.label}>TIMING</Text>
-					<Text style={styles.body}>{createdPost.availability}</Text>
-					<Text style={styles.label}>LOCATION</Text>
-					<Text style={styles.body}>{createdPost.location}</Text>
+					{createdPost.availability ? (
+						<>
+							<Text style={styles.label}>TIMING</Text>
+							<Text style={styles.body}>{createdPost.availability}</Text>
+						</>
+					) : null}
+					{createdPost.location ? (
+						<>
+							<Text style={styles.label}>LOCATION</Text>
+							<Text style={styles.body}>{createdPost.location}</Text>
+						</>
+					) : null}
 				</Card>
 
 				<View style={styles.notice}>
@@ -194,25 +200,28 @@ function PostForm({ postId }: { postId?: string }) {
 		<Screen>
 			<Text accessibilityRole="header" style={styles.heading}>{postId ? 'Edit post' : 'New post'}</Text>
 
-			<View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Post type">
-				{(['Offer', 'Request'] as const).map(option => {
-					const selected = option === type;
-					return (
-						<Pressable
-							key={option}
-							accessibilityRole="radio"
-							accessibilityState={{ selected }}
-							onPress={() => setType(option)}
-							style={[styles.segmentOption, selected && styles.segmentSelected]}
-						>
-							<Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>{option}</Text>
-						</Pressable>
-					);
-				})}
+			<View style={styles.fieldGroup}>
+				<Text style={styles.fieldLabel}>Post type (required)</Text>
+				<View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Post type">
+					{(['Offer', 'Request'] as const).map(option => {
+						const selected = option === type;
+						return (
+							<Pressable
+								key={option}
+								accessibilityRole="radio"
+								accessibilityState={{ selected }}
+								onPress={() => setType(option)}
+								style={[styles.segmentOption, selected && styles.segmentSelected]}
+							>
+								<Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>{option}</Text>
+							</Pressable>
+						);
+					})}
+				</View>
 			</View>
 
 			<Input
-				label="Title"
+				label="Title (required)"
 				placeholder={type === 'Offer' ? 'What can you help with?' : 'What do you need help with?'}
 				value={fields.title}
 				onChangeText={value => update('title', value)}
@@ -220,7 +229,7 @@ function PostForm({ postId }: { postId?: string }) {
 				error={submitted ? validation.title : undefined}
 			/>
 			<Input
-				label="Description"
+				label="Description (required)"
 				placeholder="Add useful details, what to bring, and how long it may take..."
 				value={fields.description}
 				onChangeText={value => update('description', value)}
@@ -233,7 +242,7 @@ function PostForm({ postId }: { postId?: string }) {
 			/>
 
 			<View style={styles.fieldGroup}>
-				<Text style={styles.fieldLabel}>Category</Text>
+				<Text style={styles.fieldLabel}>Category (required)</Text>
 				<View style={styles.categories}>
 					{categories.map(category => {
 						const selected = categoryChoice === category;
@@ -252,7 +261,7 @@ function PostForm({ postId }: { postId?: string }) {
 				</View>
 				{categoryChoice === 'Other' && (
 					<Input
-						label="Your category"
+						label="Your category (required)"
 						placeholder="Enter a category"
 						value={customCategory}
 						onChangeText={value => update('category', value)}
@@ -263,18 +272,16 @@ function PostForm({ postId }: { postId?: string }) {
 			</View>
 
 			<Input
-				label="Availability"
+				label="Availability (optional)"
 				placeholder="Add timing, e.g. Saturday, 1-4 PM"
 				value={fields.availability}
 				onChangeText={value => update('availability', value)}
-				error={submitted ? validation.availability : undefined}
 			/>
 			<Input
-				label="Location"
+				label="Location (optional)"
 				placeholder="Add a neighborhood or meetup spot"
 				value={fields.location}
 				onChangeText={value => update('location', value)}
-				error={submitted ? validation.location : undefined}
 			/>
 
 			<View style={styles.privacy}>
