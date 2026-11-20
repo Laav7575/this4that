@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { ReportPostButton } from '../../components/reports/ReportPostButton';
@@ -58,6 +59,7 @@ function PostDescription({ description }: { description: string }) {
 }
 
 export default function PostDetails() {
+  const posthog = usePostHog();
   const { id } = useLocalSearchParams<{ id: string }>();
   const postId = Array.isArray(id) ? id[0] : id;
   const [loaded, setLoaded] = useState<{
@@ -95,6 +97,12 @@ export default function PostDetails() {
         }
         const profile = await getProfile(result.author_id);
         if (!active || requestRetry !== retryRef.current) return;
+        posthog.capture('post_viewed', {
+          post_id: result.id,
+          post_type: result.type,
+          category: result.category,
+          platform: Platform.OS,
+        });
         setLoaded({ id: postId, status: 'ready', post: result, author: profile, viewerId: myId, error: '' });
       } catch (cause) {
         if (!active || requestRetry !== retryRef.current) return;
@@ -111,7 +119,7 @@ export default function PostDetails() {
 
     void load();
     return () => { active = false; };
-  }, [postId, retry]));
+  }, [postId, posthog, retry]));
 
   const removePost = async () => {
     if (!post || deleting) return;

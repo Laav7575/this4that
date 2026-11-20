@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatView } from '../../components/messaging/ChatView';
@@ -16,6 +17,7 @@ export default function ChatRoute() {
   return <Chat key={id} id={id} />;
 }
 function Chat({ id }: { id: string }) {
+  const posthog = usePostHog();
   const headerHeight = useHeaderHeight();
   const [person, setPerson] = useState<ProfileRow | null>(null);
   const [post, setPost] = useState<PostRow | null>(null);
@@ -71,6 +73,8 @@ function Chat({ id }: { id: string }) {
     sendingRef.current = true; setSending(true); setSendError('');
     try {
       const message = await sendMessage(id, content);
+      if (messages.length === 0) posthog.capture('conversation_started', { platform: Platform.OS });
+      posthog.capture('message_sent', { platform: Platform.OS });
       if (mounted.current) { setMessages(current => mergeMessages(current, [message])); setDraft(''); }
     } catch (e) { if (mounted.current) setSendError(e instanceof Error ? e.message : 'Message could not be sent. Your draft is saved; try again.'); }
     finally { sendingRef.current = false; if (mounted.current) setSending(false); }
