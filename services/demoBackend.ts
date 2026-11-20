@@ -15,7 +15,7 @@ const profiles: ProfileRow[] = [
 const posts: PostRow[] = [
   { id: 'my-baking', author_id: DEMO_USER_ID, title: 'Baking help for a study break', description: 'Happy to help bake cookies for your study group.', category: 'Baking', type: 'Offer', availability: 'Friday afternoon', location: 'Uptown Waterloo', created_at: minutesAgo(20) },
   { id: 'calculus', author_id: 'maya', title: 'Calculus tutoring', description: 'Review limits and derivatives together at Dana Porter.', category: 'Academic', type: 'Offer', availability: 'Weekday afternoons', location: 'Dana Porter Library', created_at: minutesAgo(40) },
-  { id: 'python', author_id: 'jordan', title: 'Python programming help', description: 'Help debugging your first Python project.', category: 'Technology', type: 'Offer', availability: 'Tuesday evening', location: 'DC Library', created_at: minutesAgo(95) },
+  { id: 'python', author_id: 'jordan', title: 'Python programming help', description: 'Help debugging your first Python project.', category: 'Technology', type: 'Offer', availability: 'Tuesday evening', location: 'DC Library', created_at: minutesAgo(95), completed_at: minutesAgo(10) },
   { id: 'groceries', author_id: 'maya', title: 'Grocery pickup', description: 'Could someone pick up a few essentials on their way home?', category: 'Errands', type: 'Request', availability: 'Sunday afternoon', location: 'Uptown Waterloo', created_at: minutesAgo(180) },
   { id: 'moving', author_id: 'jordan', title: 'Moving assistance', description: 'Need an extra pair of hands to carry a small desk.', category: 'Household', type: 'Request', availability: 'Saturday at 2 PM', location: 'University Avenue', created_at: minutesAgo(300) },
   { id: 'pets', author_id: 'aisha', title: 'Pet sitting', description: 'Happy to watch your cat while you visit home.', category: 'Pets', type: 'Offer', availability: 'Weekends', location: 'Lakeshore', created_at: minutesAgo(600) },
@@ -74,9 +74,9 @@ export async function updateMyProfile(input: Partial<ProfileInput>) {
   Object.assign(profile, input);
   return profile;
 }
-export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string } = {}) {
+export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter, includeCompleted = true }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string; includeCompleted?: boolean } = {}) {
   const terms = search?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean) ?? [];
-  return posts.filter(p => (!category || p.category === category) && (!type || p.type === type))
+  return posts.filter(p => includeCompleted || !p.completed_at).filter(p => (!category || p.category === category) && (!type || p.type === type))
     .filter(p => terms.every(term => [p.title, p.description, p.category, p.location].some(value => value.toLocaleLowerCase().includes(term))))
     .filter(p => !location?.trim() || p.location.toLocaleLowerCase().includes(location.trim().toLocaleLowerCase()))
     .filter(p => !createdAfter || p.created_at >= createdAfter)

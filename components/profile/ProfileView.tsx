@@ -112,7 +112,7 @@ export function ProfileView({ profile, posts, stats, isSelf, onMessage, messageL
                   styles.postIcon,
                   {
                     backgroundColor:
-                      post.type === 'Offer'
+                      post.completed_at ? theme.colors.completed : post.type === 'Offer'
                         ? theme.colors.successSurface
                         : theme.colors.highlight,
                   },
@@ -133,7 +133,7 @@ export function ProfileView({ profile, posts, stats, isSelf, onMessage, messageL
                   styles.badge,
                   {
                     backgroundColor:
-                      post.type === 'Offer'
+                      post.completed_at ? theme.colors.completed : post.type === 'Offer'
                         ? theme.colors.primary
                         : theme.colors.secondary,
                   },

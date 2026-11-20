@@ -188,10 +188,18 @@ await asUser(outsider, async () => {
 });
 // Completion and closure are independent, reversible, and enforced in PostgreSQL.
 await db.exec(await readFile(new URL('../supabase/migrations/202611180003_completion_states.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202611200001_post_completion_filter.sql', import.meta.url), 'utf8'));
 const historyBeforeClosure = (await db.query('select * from messages order by id')).rows;
 await asUser(a, async () => {
   const completed = (await db.query('select * from set_post_completed($1,true)', [post])).rows[0];
   assert(completed.completed_at);
+  const active = (await db.query('select id from search_posts(0,100,null,null,null,null,null,false)')).rows;
+  assert(!active.some(row => row.id === post));
+  const all = (await db.query('select id from search_posts(0,100,null,null,null,null,null,true)')).rows;
+  assert(all.some(row => row.id === post));
+  assert.deepEqual((await db.query('select id from search_posts(1,1,null,null,null,null,null,false)')).rows, active.slice(1,2));
+  assert.deepEqual((await db.query('select id from search_posts(0,100,null,null,null,null,null)')).rows, all);
+
   assert.deepEqual((await db.query('select * from set_post_completed($1,true)', [post])).rows[0].completed_at, completed.completed_at);
   assert.equal((await db.query('select closed_at from conversations where id=$1',[canonical])).rows[0].closed_at, null);
   await assert.rejects(db.query('update posts set completed_at=now() where id=$1',[post]));

@@ -158,7 +158,7 @@ export default function PostDetails() {
     <Screen>
       <Card>
         <View style={styles.topline}>
-          <Text style={[styles.badge, isOffer ? styles.offerBadge : styles.requestBadge]}>
+          <Text style={[styles.badge, post.completed_at ? styles.completedBadge : isOffer ? styles.offerBadge : styles.requestBadge]}>
             {post.completed_at ? 'Completed' : 'Active · ' + (isOffer ? 'Offering' : 'Requesting')}
           </Text>
           <View style={styles.createdRow}>
@@ -273,6 +273,7 @@ const styles = StyleSheet.create({
   descriptionToggleText: { ...theme.typography.label, color: theme.colors.success },
   topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: theme.spacing.sm },
   badge: { ...theme.typography.label, overflow: 'hidden', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs, borderRadius: theme.radius.full, color: theme.colors.text },
+  completedBadge: { backgroundColor: theme.colors.completed },
   offerBadge: { backgroundColor: theme.colors.primary },
   requestBadge: { backgroundColor: theme.colors.secondary },
   created: { ...theme.typography.caption, color: theme.colors.muted },

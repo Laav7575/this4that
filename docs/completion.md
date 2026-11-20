@@ -18,3 +18,7 @@ Demo mode implements the same states in memory. Use My Profile → Baking help f
 ## Validation
 
 `npm run typecheck` and `npm run test:backend`. Backend tests use PostgreSQL through PGlite to verify ownership, participant isolation, direct-write denial, anonymous/unconfirmed access denial, independent statuses, idempotent completion, history preservation, closed-chat send rejection, and reopening. Chrome demo checks cover completing/reopening a post, closing/reopening a chat with a draft, and filtering the closed conversation in the inbox. Native simulator testing remains outstanding.
+
+## Home visibility
+
+Completed posts use the red completed color on feed cards, post details, and profiles. Home hides them initially; Show completed includes them alongside active posts and works with the other search filters. Profile history stays visible. Apply `202611200001_post_completion_filter.sql` after the completion migration before deploying this version of the app. Filtering happens before database pagination; older clients calling the seven-argument search still receive all statuses.

@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { Image } from 'expo-image';
 import {
@@ -46,9 +46,11 @@ function FilterRow({
   options,
   selected,
   onSelect,
+  trailing,
 }: {
   options: { value: string; label: string }[];
   selected: string;
+  trailing?: ReactNode;
   onSelect: (value: string) => void;
 }) {
   return (
@@ -86,6 +88,7 @@ function FilterRow({
           </Pressable>
         );
       })}
+      {trailing}
     </ScrollView>
   );
 }
@@ -97,6 +100,7 @@ export default function Home() {
   const columns = width >= 1024 ? 3 : 1;
 
   const [category, setCategory] = useState('All');
+  const [showCompleted, setShowCompleted] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryOptions, setCategoryOptions] = useState([{ value: 'All', label: 'All categories' }]);
   const [categoryError, setCategoryError] = useState('');
@@ -175,6 +179,7 @@ export default function Home() {
       const rows = await getPosts({
         offset,
         limit: PAGE_SIZE,
+        includeCompleted: showCompleted,
         category: category === 'All' ? undefined : category,
         type: typeFilter === 'All' ? undefined : typeFilter as PostRow['type'],
         search: debouncedQuery.trim() || undefined,
@@ -241,7 +246,7 @@ export default function Home() {
         setRefreshing(false);
       }
     }
-  }, [category, dateFilter, debouncedLocation, debouncedQuery, typeFilter]);
+  }, [category, dateFilter, debouncedLocation, debouncedQuery, typeFilter, showCompleted]);
 
   const loadMore = useCallback(() => {
     if (
@@ -358,6 +363,13 @@ export default function Home() {
               options={typeOptions}
               selected={typeFilter}
               onSelect={value => setTypeFilter(value as typeof typeFilter)}
+              trailing={<Pressable accessibilityRole="button" accessibilityLabel="Show completed posts"
+                accessibilityState={{ selected: showCompleted }} onPress={() => setShowCompleted(value => !value)}
+                style={[styles.filter, showCompleted && styles.filterActive]}>
+                <Text style={[styles.filterText, { color: showCompleted ? theme.colors.surface : theme.colors.text }]}>
+                  Show completed
+                </Text>
+              </Pressable>}
             />
             <FilterRow
               options={categoryOptions}

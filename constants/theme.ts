@@ -1,7 +1,7 @@
 /** Extracted from This4That Figma App page; see docs/design.md for provenance. */
 export const theme = {
   colors: {
-    primary: '#49BEAA', secondary: '#F76C5E', background: '#FAFAFA',
+    completed: '#F76C5E', primary: '#49BEAA', secondary: '#F76C5E', background: '#FAFAFA',
     surface: '#FFFFFF', highlight: '#FFE6E8', text: '#170A1C',
     body: '#27364B', muted: '#707988', border: '#DDDDDD',
     success: '#23836F', successSurface: '#EAF8F5', subtle: '#F4F0F6',
