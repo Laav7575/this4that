@@ -17,6 +17,7 @@ import { DEMO } from '../lib/demo';
 import { getSupabase, manageSupabaseSessionRefresh } from '../lib/supabase';
 import { ActivityIndicator, AppState, Text, View } from 'react-native';
 import { expireSessionIfTooOld } from '../lib/sessionExpiry';
+import { PostHogProvider } from 'posthog-react-native';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
@@ -109,7 +110,17 @@ export default function RootLayout() {
       }} />
     </View>;
   }
-  return <TermsAcceptanceContext.Provider value={saveAcceptance}><SafeAreaProvider><StatusBar style="dark" /><Stack screenOptions={{
+  return (
+    <PostHogProvider
+      apiKey={process.env.EXPO_PUBLIC_POSTHOG_KEY!}
+      options={{
+        host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+        disabled: false,
+        flushAt: __DEV__ ? 1 : 20,
+      }}
+      debug={__DEV__}
+    >
+  <TermsAcceptanceContext.Provider value={saveAcceptance}><SafeAreaProvider><StatusBar style="dark" /><Stack screenOptions={{
     headerTintColor: theme.colors.text, headerStyle: { backgroundColor: theme.colors.surface },
     headerTitleStyle: { fontFamily: theme.typography.regular, fontSize: 15 }, contentStyle: { backgroundColor: theme.colors.background },
   }}>
@@ -131,5 +142,6 @@ export default function RootLayout() {
       <Stack.Screen name="user/[id]" options={{ title: 'Public Profile', headerBackTitle: 'Back' }} />
       <Stack.Screen name="edit-profile" options={{ title: 'Edit Profile', headerBackTitle: 'Back' }} />
     </Stack.Protected>
-  </Stack></SafeAreaProvider></TermsAcceptanceContext.Provider>;
+  </Stack></SafeAreaProvider></TermsAcceptanceContext.Provider>
+  </PostHogProvider>);
 }

@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 import { Button, Input } from '../../components/ui';
 import { PostCard } from '../../components/posts/PostCard';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
@@ -91,6 +93,7 @@ function FilterRow({
 }
 
 export default function Home() {
+  const posthog = usePostHog();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   // Narrow desktop windows and phones both need readable, full-width cards.
@@ -120,6 +123,7 @@ export default function Home() {
   const nextOffset = useRef(0);
   const loadingRef = useRef(false);
   const requestId = useRef(0);
+  const lastTrackedSearch = useRef('');
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -182,6 +186,18 @@ export default function Home() {
         createdAfter: ageMilliseconds ? new Date(Date.now() - ageMilliseconds).toISOString() : undefined,
       });
       if (currentRequest !== requestId.current) return;
+      const searchTerm = debouncedQuery.trim();
+      if (searchTerm && lastTrackedSearch.current !== searchTerm) {
+        posthog.capture('search_performed', {
+          search_query: searchTerm,
+          category,
+          post_type: typeFilter,
+          platform: Platform.OS,
+        });
+        lastTrackedSearch.current = searchTerm;
+      } else if (!searchTerm) {
+        lastTrackedSearch.current = '';
+      }
 
       // Advance by all database rows, including our own posts.
       nextOffset.current = offset + rows.length;
@@ -241,7 +257,7 @@ export default function Home() {
         setRefreshing(false);
       }
     }
-  }, [category, dateFilter, debouncedLocation, debouncedQuery, typeFilter]);
+  }, [category, dateFilter, debouncedLocation, debouncedQuery, posthog, typeFilter]);
 
   const loadMore = useCallback(() => {
     if (

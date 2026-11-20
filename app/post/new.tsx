@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 import { Screen } from '../../components/Screen';
 import { Button, Card, Input } from '../../components/ui';
 import { theme } from '../../constants/theme';
@@ -45,6 +46,7 @@ export default function NewPost() {
 }
 
 function PostForm({ postId }: { postId?: string }) {
+	const posthog = usePostHog();
 	const [type, setType] = useState<PostInput['type']>('Request');
 	const [fields, setFields] = useState<Fields>(initialFields);
 	const [submitted, setSubmitted] = useState(false);
@@ -123,6 +125,11 @@ function PostForm({ postId }: { postId?: string }) {
 				router.back();
 			} else {
 				const post = await createPost(input);
+				posthog.capture('post_created', {
+					post_type: type,
+					category: input.category,
+					platform: Platform.OS,
+				});
 				setCreatedPost(post);
 			}
 		} catch (cause) {

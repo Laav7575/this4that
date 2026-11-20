@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import * as Linking from 'expo-linking';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 import { Screen } from '../components/Screen';
 import { Button, Input } from '../components/ui';
 import { theme } from '../constants/theme';
@@ -13,6 +14,7 @@ type Mode = 'signin' | 'signup' | 'forgot';
 const isWaterlooEmail = (email: string) => /^[^\s@]+@uwaterloo\.ca$/i.test(email.trim());
 
 export default function Login() {
+  const posthog = usePostHog();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('signin');
   const [name, setName] = useState('');
@@ -50,14 +52,18 @@ export default function Login() {
         await requestPasswordReset(email, Linking.createURL('/reset-password'));
         setNotice('If an account exists for that email, a reset link is on its way. Check your inbox and spam or junk.');
       } else if (isSignUp) {
-        await signUp(email, password, name.trim());
+        const { user } = await signUp(email, password, name.trim());
+        if (user) posthog.identify(user.id);
+        posthog.capture('signup_completed', { platform: Platform.OS });
         // With email confirmation on, there is no session until the link in the email is opened.
         setMode('signin');
         setSubmitted(false);
         setPassword('');
         setNotice('Check your inbox and spam or junk to confirm your account, then sign in.');
       } else {
-        await signIn(email, password);
+        const { user } = await signIn(email, password);
+        posthog.identify(user.id);
+        posthog.capture('login_completed', { platform: Platform.OS });
       }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Something went wrong. Try again.');
