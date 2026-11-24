@@ -52,8 +52,8 @@ export async function updateMyProfile(input: Partial<ProfileInput>) {
   if (error) throw error;
   return data;
 }
-export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string } = {}) {
-  if (DEMO) return demo.getPosts({ offset, limit, category, type, search, location, createdAfter });
+export async function getPosts({ offset = 0, limit = 20, category, type, search, location, createdAfter, includeCompleted = true }: { offset?: number; limit?: number; category?: string; type?: PostInput['type']; search?: string; location?: string; createdAfter?: string; includeCompleted?: boolean } = {}) {
+  if (DEMO) return demo.getPosts({ offset, limit, category, type, search, location, createdAfter, includeCompleted });
   const [from, to] = page(offset, limit);
   const { data, error } = await getSupabase().rpc('search_posts', {
     p_offset: from,
@@ -63,10 +63,11 @@ export async function getPosts({ offset = 0, limit = 20, category, type, search,
     p_search: search?.trim() || null,
     p_location: location?.trim() || null,
     p_created_after: createdAfter ?? null,
+    p_include_completed: includeCompleted,
   });
   if (error) {
     if (error.code === 'PGRST202') {
-      throw new Error('Post search is unavailable because the partial-search migration has not been applied. Apply 202610200001_partial_post_search.sql to your Supabase project.');
+      throw new Error('Post search requires the completion-filter migration. Apply 202611200001_post_completion_filter.sql to your Supabase project.');
     }
     throw error;
   }

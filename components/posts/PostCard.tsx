@@ -32,7 +32,7 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
           <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
           <Text style={styles.meta} numberOfLines={2} ellipsizeMode="tail">{post.location} · {timeAgo(post.created_at)}</Text>
         </View>
-        <View style={[styles.typeChip, isOffer ? styles.offerChip : styles.requestChip]}>
+        <View style={[styles.typeChip, post.completed_at ? styles.completedChip : isOffer ? styles.offerChip : styles.requestChip]}>
           <Text style={styles.typeChipText}>{post.completed_at ? 'Completed' : isOffer ? 'Offering' : 'Requesting'}</Text>
         </View>
       </View>
@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
   name: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text },
   meta: { ...theme.typography.caption, color: theme.colors.muted },
   typeChip: { flexShrink: 0, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
+  completedChip: { backgroundColor: theme.colors.completed },
   requestChip: { backgroundColor: theme.colors.secondary },
   offerChip: { backgroundColor: theme.colors.primary },
   typeChipText: { ...theme.typography.label, color: theme.colors.text },

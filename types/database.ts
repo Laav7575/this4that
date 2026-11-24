@@ -28,6 +28,7 @@ export interface Database {
       get_post_categories: { Args: Record<PropertyKey, never>; Returns: { category: string }[] };
       search_posts: {
         Args: {
+          p_include_completed?: boolean;
           p_offset: number;
           p_limit: number;
           p_category: string | null;
