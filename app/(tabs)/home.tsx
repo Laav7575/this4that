@@ -103,6 +103,7 @@ export default function Home() {
   const columns = width >= 1024 ? 3 : 1;
 
   const [category, setCategory] = useState('All');
+  const [hideOwnPosts, setHideOwnPosts] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryOptions, setCategoryOptions] = useState([{ value: 'All', label: 'All categories' }]);
@@ -208,10 +209,8 @@ export default function Home() {
       nextOffset.current = offset + rows.length;
       setHasMore(rows.length === PAGE_SIZE);
 
-      // Exclude posts created by the signed-in user.
-      const filteredRows = rows.filter(
-        row => row.author_id !== myId,
-      );
+      // Keep all fetched rows so the ownership filter can be toggled instantly.
+      const filteredRows = rows;
 
       // Fetch profiles only for authors in this page.
       const authorIds = Array.from(
@@ -318,13 +317,15 @@ export default function Home() {
     });
   }, [navigation]);
 
+  const visiblePosts = hideOwnPosts ? posts.filter(post => post.author_id !== myId) : posts;
+
   return (
     <View style={styles.fill}>
       <FlatList
         key={columns}
         numColumns={columns}
         nestedScrollEnabled
-        data={posts}
+        data={visiblePosts}
         keyExtractor={post => post.id}
         renderItem={({ item }) => (
           <View style={columns > 1 ? styles.cell3 : styles.cell1}>
@@ -379,13 +380,20 @@ export default function Home() {
               options={typeOptions}
               selected={typeFilter}
               onSelect={value => setTypeFilter(value as typeof typeFilter)}
-              trailing={<Pressable accessibilityRole="button" accessibilityLabel="Show completed posts"
+              trailing={<><Pressable accessibilityRole="button" accessibilityLabel="Show completed posts"
                 accessibilityState={{ selected: showCompleted }} onPress={() => setShowCompleted(value => !value)}
                 style={[styles.filter, showCompleted && styles.filterActive]}>
                 <Text style={[styles.filterText, { color: showCompleted ? theme.colors.surface : theme.colors.text }]}>
                   Show completed
                 </Text>
-              </Pressable>}
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Hide my posts"
+                accessibilityState={{ selected: hideOwnPosts }} onPress={() => setHideOwnPosts(value => !value)}
+                style={[styles.filter, hideOwnPosts && styles.filterActive]}>
+                <Text style={[styles.filterText, { color: hideOwnPosts ? theme.colors.surface : theme.colors.text }]}>
+                  Hide my posts
+                </Text>
+              </Pressable></>}
             />
             <FilterRow
               options={categoryOptions}
@@ -452,7 +460,7 @@ export default function Home() {
             ) : null}
             <View style={styles.resultsHeader}>
               <Text style={styles.resultsTitle}>Results</Text>
-              <Text style={styles.resultsCount}>{posts.length}{hasMore ? '+' : ''} {posts.length === 1 ? 'post' : 'posts'}</Text>
+              <Text style={styles.resultsCount}>{visiblePosts.length}{hasMore ? '+' : ''} {visiblePosts.length === 1 ? 'post' : 'posts'}</Text>
             </View>
           </View>
         }
@@ -462,6 +470,8 @@ export default function Home() {
               accessibilityLabel="Loading more posts"
               style={styles.footerLoader}
             />
+          ) : hasMore && status === 'ready' ? (
+            <Button label="Load more posts" variant="secondary" onPress={loadMore} />
           ) : null
         }
         ListEmptyComponent={
@@ -493,9 +503,9 @@ export default function Home() {
             </View>
           ) : (
             <Text style={styles.empty}>
-              {query.trim() || location.trim() || dateFilter !== 'any' || category !== 'All' || typeFilter !== 'All'
+              {hideOwnPosts || query.trim() || location.trim() || dateFilter !== 'any' || category !== 'All' || typeFilter !== 'All'
                 ? 'No posts match your filters. Try changing or clearing them.'
-                : 'No posts from other students yet.'}
+                : 'No posts yet.'}
             </Text>
           )
         }
