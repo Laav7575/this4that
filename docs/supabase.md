@@ -131,3 +131,18 @@ Apply `supabase/migrations/202610200001_one_conversation_per_pair.sql` to the ex
 This transaction combines duplicate two-person conversations into the oldest conversation, preserving every message's ID, content, sender and timestamp. It retains that conversation's original post context. The RPC then reuses that conversation across posts and serializes simultaneous requests for the same pair. The app no longer makes a post-specific lookup. Existing links to removed duplicate conversations must be reopened from the refreshed inbox; device-local unread indicators may reappear after merging.
 
 `npm run test:backend` covers merging existing histories, reuse across different posts and in both directions, separate student pairs, and access controls. Applying the migration to the hosted database is a separate deployment step.
+
+## Message email notifications
+
+Unread indicators are tracked on the current device and clear when a conversation is opened. Email alerts for incoming messages are enabled by default; each student can turn them off from the Messages screen. The preference is private to the account and enforced by RLS. The app only asks the `notify-message` Edge Function to send after a message is successfully saved; notification delivery failure does not undo the message.
+
+Apply `supabase/migrations/202611250001_message_email_notifications.sql` after the messaging and completion-state migrations, then deploy `supabase/functions/notify-message`. The function verifies the signed-in sender, message, and conversation participants before looking up the recipient's confirmed Waterloo Auth email. A delivery row prevents repeat sends for the same message. The email includes a safely escaped preview of up to 100 message characters and a conversation link. Web links use the request origin only when it matches the allowlisted local (`http://localhost:8081`) or production (`https://this4that.vercel.app`) site; native clients use the `this4that://` app scheme. Add any future web domain to the function's allowlist.
+
+The function uses the existing SMTP secrets (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, and optional `SMTP_PORT`, default `465`). Set `MESSAGES_FROM` to a sender address authorized by the SMTP provider; if omitted, `SMTP_USER` is used. SMTP credentials belong in Supabase Edge Function secrets, never in the app or `.env`. Deploy after setting secrets with:
+
+```sh
+supabase secrets set SMTP_HOST=... SMTP_USER=... SMTP_PASS=... MESSAGES_FROM=...
+supabase functions deploy notify-message
+```
+
+The Supabase Auth email used for password recovery is separate; it cannot send arbitrary message alerts. If SMTP is unavailable, the message remains sent and the app reports that its email alert could not be delivered.

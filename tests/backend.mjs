@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const db = new PGlite({ extensions: { pg_trgm } });
 // Minimal Supabase Auth/roles fixture. PGlite runs actual PostgreSQL policies, not JS simulations.
 await db.exec(`
-  create role anon; create role authenticated;
+  create role anon; create role authenticated; create role service_role bypassrls;
   create schema auth;
   create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz);
   create function auth.uid() returns uuid language sql stable as $$
@@ -16,6 +16,7 @@ await db.exec(`
   grant execute on function auth.uid() to authenticated;
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/202610120001_backend.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/202611250001_message_email_notifications.sql', import.meta.url), 'utf8'));
 const migrationOwner = '00000000-0000-0000-0000-000000000006';
 await db.query("insert into auth.users values ($1,'migration@uwaterloo.ca',now())", [migrationOwner]);
 await db.query("insert into public.profiles(id,name) values ($1,'Migration fixture')", [migrationOwner]);
@@ -137,7 +138,23 @@ await asUser(a, async () => {
   await db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'Hello\')',[conversation,a]);
   await assert.rejects(db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'Spoof\')',[conversation,b]));
   await assert.rejects(db.query('insert into messages(conversation_id,sender_id,content) values ($1,$2,\'  \')',[conversation,a]));
+  assert.deepEqual((await db.query('select email_enabled from message_notification_preferences')).rows, []);
+  await db.query('insert into message_notification_preferences(user_id,email_enabled) values ($1,false)',[a]);
+  assert.deepEqual((await db.query('select email_enabled from message_notification_preferences')).rows, [{ email_enabled: false }]);
+  await db.query('update message_notification_preferences set email_enabled=true where user_id=$1',[a]);
+  await assert.rejects(db.query('update message_notification_preferences set user_id=$1 where user_id=$2',[b,a]));
+  await assert.rejects(db.query('insert into message_notification_preferences(user_id,email_enabled) values ($1,false)',[b]));
 });
+await asUser(b, async () => {
+  assert.deepEqual((await db.query('select email_enabled from message_notification_preferences')).rows, []);
+  await db.query('insert into message_notification_preferences(user_id,email_enabled) values ($1,false)',[b]);
+});
+const deliveredMessage = (await db.query('select id from messages where conversation_id=$1 order by timestamp desc, id desc limit 1',[conversation])).rows[0].id;
+await db.exec('set role service_role');
+await db.query('insert into message_email_deliveries(message_id,recipient_id) values ($1,$2)',[deliveredMessage,b]);
+assert.equal((await db.query('select * from message_email_deliveries where message_id=$1',[deliveredMessage])).rows.length,1);
+await db.exec('reset role');
+await asUser(a, async () => assert.rejects(db.query('select * from message_email_deliveries')));
 // Reproduce legacy duplicates, then migrate without dropping either history.
 const duplicate = await asUser(b, async () => (await db.query('select create_conversation($1) as id',[a])).rows[0].id);
 await asUser(b, async () => db.query("insert into messages(conversation_id,sender_id,content) values ($1,$2,'Second thread')",[duplicate,b]));
@@ -240,4 +257,4 @@ await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));
 await db.close();
-console.log('PASS: independent completion/closure, reopen, closed-chat send rejection, status authorization, duplicate-history merge, per-person reuse across posts and directions, separate pairs, migration, ownership, confirmed Waterloo access, participant isolation, sender spoofing, membership escalation, anonymous denial, and private email separation, and terms acceptance permissions and retries.');
+console.log('PASS: message notification preference and delivery RLS, completion/closure, duplicate-history merge, conversation reuse, ownership, participant isolation, sender spoofing, membership escalation, confirmed Waterloo access, private email separation, and terms acceptance permissions.');
