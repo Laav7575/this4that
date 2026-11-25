@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEMO, DEMO_USER_ID } from '../lib/demo';
 import { getSupabase } from '../lib/supabase';
 import * as demo from './demoBackend';
-import { createConversation, getConversations, getMessages, getParticipants, getPost, getProfile } from './backend';
+import { createConversation, getConversations, getLatestIncomingMessage, getMessages, getParticipants, getPost, getProfile } from './backend';
 import type { ConversationRow, MessageRow, PostRow, ProfileRow } from '../types/database';
 
 export type InboxItem = { conversation: ConversationRow; person: ProfileRow | null; latest?: MessageRow; unread: boolean };
@@ -18,19 +18,44 @@ const readKey = (userId: string, id: string) => `messages:read:${userId}:${id}`;
 export async function markConversationRead(userId: string, id: string, timestamp: string) {
   const key = readKey(userId, id);
   const previous = await AsyncStorage.getItem(key);
-  if (!previous || Date.parse(timestamp) > Date.parse(previous)) await AsyncStorage.setItem(key, timestamp);
+  if (!previous || !Number.isFinite(Date.parse(previous)) || Date.parse(timestamp) > Date.parse(previous)) {
+    await AsyncStorage.setItem(key, timestamp);
+  }
 }
 export async function loadInbox(userId: string, offset: number, limit = 20): Promise<InboxItem[]> {
   const conversations = await getConversations(offset, limit);
   return Promise.all(conversations.map(async conversation => {
-    const [participants, history, readAt] = await Promise.all([
-      getParticipants(conversation.id), getMessages(conversation.id, 0, 1), AsyncStorage.getItem(readKey(userId, conversation.id)),
+    const [participants, history, latestIncoming, readAt] = await Promise.all([
+      getParticipants(conversation.id), getMessages(conversation.id, 0, 1),
+      getLatestIncomingMessage(conversation.id, userId), AsyncStorage.getItem(readKey(userId, conversation.id)),
     ]);
     const other = participants.find(p => p.user_id !== userId);
     const person = other ? await getProfile(other.user_id) : null;
     const latest = history[0];
-    return { conversation, person, latest, unread: !!latest && latest.sender_id !== userId && (!readAt || Date.parse(latest.timestamp) > Date.parse(readAt)) };
+    const readTimestamp = readAt ? Date.parse(readAt) : NaN;
+    return {
+      conversation, person, latest,
+      unread: !!latestIncoming && (!Number.isFinite(readTimestamp) || Date.parse(latestIncoming.timestamp) > readTimestamp),
+    };
   }));
+}
+export async function getMessageEmailNotifications(userId: string) {
+  if (DEMO) return false;
+  const { data, error } = await getSupabase().from('message_notification_preferences')
+    .select('email_enabled').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data?.email_enabled ?? true;
+}
+export async function setMessageEmailNotifications(userId: string, enabled: boolean) {
+  if (DEMO) throw new Error('Email notifications are unavailable in demo mode.');
+  const { error } = await getSupabase().from('message_notification_preferences')
+    .upsert({ user_id: userId, email_enabled: enabled }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+export async function notifyMessageRecipient(messageId: string) {
+  if (DEMO) return;
+  const { error } = await getSupabase().functions.invoke('notify-message', { body: { messageId } });
+  if (error) throw new Error('Message was sent, but its email notification could not be delivered.');
 }
 export async function loadChatDetails(id: string, userId: string): Promise<{ person: ProfileRow | null; post: PostRow | null; conversation: ConversationRow }> {
   const { data: conversation, error } = DEMO ? { data: await demo.getConversation(id), error: null }

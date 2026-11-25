@@ -129,6 +129,10 @@ export async function createConversation(otherUserId: string, postId?: string) {
 export async function getMessages(conversationId: string, offset = 0, limit = 50) {
   return messages.filter(m => m.conversation_id === conversationId).sort(newestFirst).slice(offset, offset + limit);
 }
+export async function getLatestIncomingMessage(conversationId: string, userId: string) {
+  return messages.filter(message => message.conversation_id === conversationId && message.sender_id !== userId)
+    .sort(newestFirst)[0] ?? null;
+}
 export async function getMessagesBefore(conversationId: string, before: MessageRow, limit = 50) {
   return messages.filter(m => m.conversation_id === conversationId && newestFirst(m, before) > 0).sort(newestFirst).slice(0, limit);
 }

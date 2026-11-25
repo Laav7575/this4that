@@ -122,6 +122,13 @@ export async function getMessages(conversationId: string, offset = 0, limit = 50
   if (error) throw error;
   return data; // Newest first; reverse for chronological display.
 }
+export async function getLatestIncomingMessage(conversationId: string, userId: string) {
+  if (DEMO) return demo.getLatestIncomingMessage(conversationId, userId);
+  const { data, error } = await getSupabase().from('messages').select('*').eq('conversation_id', conversationId)
+    .neq('sender_id', userId).order('timestamp', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
 export async function sendMessage(conversationId: string, content: string) {
   if (DEMO) return demo.sendMessage(conversationId, content);
   const { data, error } = await getSupabase().from('messages').insert({ conversation_id: conversationId, sender_id: await userId(), content }).select().single();

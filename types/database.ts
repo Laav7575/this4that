@@ -19,6 +19,11 @@ export interface Database {
       conversations: Table<ConversationRow, never, never>;
       conversation_participants: Table<ParticipantRow, never, never>;
       messages: Table<MessageRow, Pick<MessageRow, 'conversation_id' | 'sender_id' | 'content'>, never>;
+      message_notification_preferences: Table<
+        { user_id: string; email_enabled: boolean; updated_at: string },
+        { user_id: string; email_enabled: boolean },
+        { email_enabled: boolean }
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {

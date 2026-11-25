@@ -8,8 +8,8 @@ import { ChatView } from '../../components/messaging/ChatView';
 import { ChatNavigation, HeaderIcon } from '../../components/messaging/Navigation';
 import { Button } from '../../components/ui';
 import { theme } from '../../constants/theme';
-import { getMessages, sendMessage, setConversationClosed, setPostCompleted } from '../../services/backend';
-import { getEarlierMessages, loadChatDetails, markConversationRead, mergeMessages, messagingUser } from '../../services/messaging';
+import { getLatestIncomingMessage, getMessages, sendMessage, setConversationClosed, setPostCompleted } from '../../services/backend';
+import { getEarlierMessages, loadChatDetails, markConversationRead, mergeMessages, messagingUser, notifyMessageRecipient } from '../../services/messaging';
 import type { ConversationRow, MessageRow, PostRow, ProfileRow } from '../../types/database';
 
 export default function ChatRoute() {
@@ -54,12 +54,13 @@ function Chat({ id }: { id: string }) {
         setPerson(details.person); setUserId(me);
         if (version === statusRevision.current) setPost(details.post);
         if (version === statusRevision.current) setConversation(details.conversation);
-        const history = await getMessages(id, 0, 50);
+        const [history, newestIncoming] = await Promise.all([
+          getMessages(id, 0, 50), getLatestIncomingMessage(id, me),
+        ]);
         if (!active) return;
         setMessages(current => mergeMessages(current, history));
         if (initial) setHasOlder(history.length === 50);
         setReady(true); setError('');
-        const newestIncoming = history.find(message => message.sender_id !== me);
         if (newestIncoming) await markConversationRead(me, id, newestIncoming.timestamp).catch(() => {
           if (active) setError('Messages loaded, but unread status could not be saved on this device.');
         });
@@ -79,6 +80,8 @@ function Chat({ id }: { id: string }) {
       if (messages.length === 0) posthog.capture('conversation_started', { platform: Platform.OS });
       posthog.capture('message_sent', { platform: Platform.OS });
       if (mounted.current) { setMessages(current => mergeMessages(current, [message])); setDraft(''); }
+      try { await notifyMessageRecipient(message.id); }
+      catch (e) { if (mounted.current) setSendError(e instanceof Error ? e.message : 'Message was sent, but its email notification could not be delivered.'); }
     } catch (e) { if (mounted.current) setSendError(e instanceof Error ? e.message : 'Message could not be sent. Your draft is saved; try again.'); }
     finally { sendingRef.current = false; if (mounted.current) setSending(false); }
   };

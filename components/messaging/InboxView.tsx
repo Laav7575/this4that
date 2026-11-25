@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Image } from 'expo-image';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Avatar, Button } from '../ui';
 import { theme } from '../../constants/theme';
 import { inboxTime, type InboxItem } from '../../services/messaging';
 
-export function InboxView({ items, userId, loading, error, onRefresh, onOpen, onExplore }: {
+export function InboxView({ items, userId, loading, error, onRefresh, onOpen, onExplore, emailNotifications, loadingEmailPreference,
+  savingEmailPreference, emailPreferenceError, notificationsAvailable, onEmailNotificationsChange, onRetryEmailPreference }: {
   items: InboxItem[]; userId: string; loading: boolean; error: string;
   onRefresh: () => void; onOpen: (id: string) => void; onExplore: () => void;
+  emailNotifications: boolean; loadingEmailPreference: boolean; savingEmailPreference: boolean; emailPreferenceError: string;
+  notificationsAvailable: boolean; onEmailNotificationsChange: (enabled: boolean) => void; onRetryEmailPreference: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'closed'>('all');
@@ -41,6 +44,23 @@ export function InboxView({ items, userId, loading, error, onRefresh, onOpen, on
           <Text style={styles.filterText}>{value === 'all' ? 'All statuses' : value === 'active' ? 'Active' : 'Closed'}</Text>
         </Pressable>)}
       </View>
+      {notificationsAvailable && <View style={styles.notificationPreference}>
+        <View style={styles.notificationControlRow}>
+          <View style={styles.notificationCopy}>
+            <Text style={styles.notificationTitle}>Email alerts for new messages</Text>
+            <Text style={styles.notificationDescription}>If alerts land in junk, add the sender's address to your contacts or safe-senders list. You can turn these off anytime.</Text>
+          </View>
+          {loadingEmailPreference ? <ActivityIndicator color={theme.colors.primary} accessibilityLabel="Loading email notification preference" /> :
+            <Switch value={emailNotifications} disabled={savingEmailPreference || !!emailPreferenceError}
+              accessibilityLabel="Email alerts for new messages"
+              accessibilityState={{ checked: emailNotifications, disabled: savingEmailPreference || !!emailPreferenceError }}
+              onValueChange={onEmailNotificationsChange} />}
+        </View>
+        {!!emailPreferenceError && <View style={styles.preferenceError}>
+          <Text accessibilityRole="alert" style={styles.error}>{emailPreferenceError}</Text>
+          <Button label="Retry" variant="secondary" onPress={onRetryEmailPreference} />
+        </View>}
+      </View>}
       {!!error && <View style={styles.feedback}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button label="Retry" variant="secondary" onPress={onRefresh} /></View>}
     </View>}
     renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.person?.name ?? 'Student'}, ${item.conversation.closed_at ? 'closed' : 'active'}, ${item.unread ? 'unread, ' : ''}${item.latest?.content ?? 'Start a conversation'}`}
@@ -75,6 +95,12 @@ const styles = StyleSheet.create({
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, clearText: { fontSize: 22, color: theme.colors.muted },
   filters: { flexDirection: 'row', gap: 8 }, filter: { paddingHorizontal: 10, minHeight: 36, justifyContent: 'center',
     borderRadius: theme.radius.full, backgroundColor: theme.colors.surface }, filterText: { ...theme.typography.label, color: theme.colors.text },
+  notificationPreference: { gap: 8, padding: 12,
+    borderRadius: 8, backgroundColor: theme.colors.surface },
+  notificationControlRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notificationCopy: { flex: 1, gap: 3 }, notificationTitle: { ...theme.typography.label, color: theme.colors.text },
+  notificationDescription: { ...theme.typography.caption, color: theme.colors.muted },
+  preferenceError: { gap: 8 },
   selected: { backgroundColor: theme.colors.highlight },
   row: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20, minHeight: 88,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
