@@ -185,11 +185,15 @@ export default function PostDetails() {
         <PostDescription key={post.id} description={post.description} />
         <View style={styles.tags}>
           <Text style={styles.tag}>{post.category}</Text>
-          <Text style={styles.tag}>{post.availability}</Text>
+          {post.availability.trim() ? <Text style={styles.tag}>{post.availability}</Text> : null}
         </View>
-        <View style={styles.rule} />
-        <Text style={styles.label}>LOCATION</Text>
-        <Text style={styles.body}>{post.location}</Text>
+        {post.location.trim() ? (
+          <>
+            <View style={styles.rule} />
+            <Text style={styles.label}>LOCATION</Text>
+            <Text style={styles.body}>{post.location}</Text>
+          </>
+        ) : null}
       </Card>
 
       {viewerId === post.author_id ? (
