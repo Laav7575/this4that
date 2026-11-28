@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../constants/theme';
 import { messageTime } from '../../services/messaging';
+import { parseSharedPost } from '../../services/share';
+import { SharedPostCard } from './SharedPostCard';
 import type { MessageRow } from '../../types/database';
 
 /** Figma Foundation 13:1901: asymmetric corners, outgoing messages on the right. */
@@ -13,6 +15,17 @@ export function MessageBubble({ message, sent, onOpenPost }: { message: MessageR
     {message.content.split('\n').map((line, i) => <Text key={i} style={i ? styles.noticePrevious : styles.noticeText}>{line}</Text>)}
     <Text style={styles.noticeLink}>View exchange</Text>
   </Pressable>; }
+  const shared = parseSharedPost(message.content);
+  if (shared && onOpenPost) {
+    const card = <SharedPostCard postId={shared.postId} sent={sent} time={messageTime(message.timestamp)} onOpen={onOpenPost} />;
+    if (!shared.text) return card;
+    return <View style={{ gap: theme.spacing.xs }}>
+      <View style={[styles.bubble, sent ? styles.sent : styles.received]}>
+        <Text selectable style={[styles.content, sent && styles.inverse]}>{shared.text}</Text>
+      </View>
+      {card}
+    </View>;
+  }
   return <View style={[styles.bubble, sent ? styles.sent : styles.received]}>
     <Text selectable style={[styles.content, sent && styles.inverse]}>{message.content}</Text>
     <Text style={[styles.time, sent && styles.sentTime]}>{messageTime(message.timestamp)}</Text>

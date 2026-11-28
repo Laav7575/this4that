@@ -5,6 +5,7 @@ import { usePostHog } from 'posthog-react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { ReportPostButton } from '../../components/reports/ReportPostButton';
+import { SharePostButton } from '../../components/share/SharePostButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
 import { deletePost, getPost, getProfile, setPostCompleted } from '../../services/backend';
@@ -171,6 +172,7 @@ export default function PostDetails() {
           </Text>
           <View style={styles.createdRow}>
             <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
+            <SharePostButton postId={post.id} title={post.title} />
             <ReportPostButton
               postId={post.id}
               authorId={post.author_id}
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
   offerBadge: { backgroundColor: theme.colors.primary },
   requestBadge: { backgroundColor: theme.colors.secondary },
   created: { ...theme.typography.caption, color: theme.colors.muted },
-  createdRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
+  createdRow: { flexDirection: 'row', alignItems: 'center' },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   tag: { ...theme.typography.caption, color: theme.colors.body, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   rule: { height: 1, backgroundColor: theme.colors.border },
