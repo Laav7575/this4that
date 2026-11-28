@@ -110,7 +110,7 @@ export function SharePostButton({ postId, title }: { postId: string; title: stri
 }
 
 const styles = StyleSheet.create({
-  iconButton: { minWidth: theme.dimensions.touchTarget, minHeight: theme.dimensions.touchTarget, alignItems: 'center', justifyContent: 'center' },
+  iconButton: { marginRight: -11, minWidth: theme.dimensions.touchTarget, minHeight: theme.dimensions.touchTarget, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: theme.spacing.lg },
   card: { width: '100%', maxWidth: 420, maxHeight: '90%', backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, padding: theme.spacing.lg, gap: theme.spacing.md },
   title: { ...theme.typography.heading, color: theme.colors.text },

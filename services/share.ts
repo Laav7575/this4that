@@ -5,6 +5,8 @@ import { getConversations, getParticipants, getProfile, sendMessage } from './ba
 import { messagingUser, notifyMessageRecipient } from './messaging';
 import type { ProfileRow } from '../types/database';
 
+export const POST_LINK_TOKEN = /\S*\/post\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*/i;
+
 /** Matches the post id in a shared link, so chat can offer an "Open post" button. */
 export const POST_LINK_PATTERN = /\/post\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
 

@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   offerBadge: { backgroundColor: theme.colors.primary },
   requestBadge: { backgroundColor: theme.colors.secondary },
   created: { ...theme.typography.caption, color: theme.colors.muted },
-  createdRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
+  createdRow: { flexDirection: 'row', alignItems: 'center' },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   tag: { ...theme.typography.caption, color: theme.colors.body, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.full, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   rule: { height: 1, backgroundColor: theme.colors.border },

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../constants/theme';
 import { messageTime } from '../../services/messaging';
-import { POST_LINK_PATTERN } from '../../services/share';
+import { POST_LINK_PATTERN, POST_LINK_TOKEN } from '../../services/share';
 import type { MessageRow } from '../../types/database';
 
 /** Figma Foundation 13:1901: asymmetric corners, outgoing messages on the right. */
@@ -15,8 +15,9 @@ export function MessageBubble({ message, sent, onOpenPost }: { message: MessageR
     <Text style={styles.noticeLink}>View exchange</Text>
   </Pressable>; }
   const sharedPostId = message.content.match(POST_LINK_PATTERN)?.[1];
+  const shownText = sharedPostId && onOpenPost ? message.content.replace(POST_LINK_TOKEN, '').trim() : message.content;
   return <View style={[styles.bubble, sent ? styles.sent : styles.received]}>
-    <Text selectable style={[styles.content, sent && styles.inverse]}>{message.content}</Text>
+    <Text selectable style={[styles.content, sent && styles.inverse]}>{shownText}</Text>
     {sharedPostId && onOpenPost ? <Pressable accessibilityRole="link" accessibilityLabel="Open shared post" onPress={() => onOpenPost(sharedPostId)}>
       <Text style={[styles.openPost, sent && styles.inverse]}>Open post</Text>
     </Pressable> : null}
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
   received: { alignSelf: 'flex-start', backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border, borderBottomLeftRadius: 4 },
   content: { ...theme.typography.body, fontFamily: theme.typography.medium, color: theme.colors.body },
   inverse: { color: theme.colors.surface }, time: { ...theme.typography.caption, color: theme.colors.muted },
-  openPost: { ...theme.typography.caption, fontFamily: theme.typography.semibold, color: theme.colors.text, textDecorationLine: 'underline' },
+  openPost: { ...theme.typography.body, fontFamily: theme.typography.semibold, color: theme.colors.text, textDecorationLine: 'underline' },
   sentTime: { color: theme.colors.surface, opacity: 0.7 },
   notice: { alignSelf: 'center', alignItems: 'center', maxWidth: '90%', gap: 2, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.md,
     borderRadius: 8, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
