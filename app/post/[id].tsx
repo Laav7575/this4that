@@ -5,6 +5,7 @@ import { usePostHog } from 'posthog-react-native';
 import { Screen } from '../../components/Screen';
 import { MessageAuthorButton } from '../../components/messaging/MessageAuthorButton';
 import { ReportPostButton } from '../../components/reports/ReportPostButton';
+import { SharePostButton } from '../../components/share/SharePostButton';
 import { Avatar, Button, Card } from '../../components/ui';
 import { theme } from '../../constants/theme';
 import { deletePost, getPost, getProfile, setPostCompleted } from '../../services/backend';
@@ -171,6 +172,7 @@ export default function PostDetails() {
           </Text>
           <View style={styles.createdRow}>
             <Text style={styles.created}>Posted {new Date(post.created_at).toLocaleDateString()}</Text>
+            <SharePostButton postId={post.id} title={post.title} />
             <ReportPostButton
               postId={post.id}
               authorId={post.author_id}
