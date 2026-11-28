@@ -5,10 +5,16 @@ import { getConversations, getParticipants, getProfile, sendMessage } from './ba
 import { messagingUser, notifyMessageRecipient } from './messaging';
 import type { ProfileRow } from '../types/database';
 
-export const POST_LINK_TOKEN = /\S*\/post\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\S*/i;
+const SHARE_PREFIX = 'Check out this post: ';
+const SHARED_POST_MESSAGE = /^Check out this post: [\s\S]*\n\S*\/post\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*$/i;
 
-/** Matches the post id in a shared link, so chat can offer an "Open post" button. */
-export const POST_LINK_PATTERN = /\/post\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+const POST_LINK = /(\S*\/post\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\S*)/i;
+
+export function parseSharedPost(content: string): { postId: string; text: string } | undefined {
+  const match = content.match(POST_LINK);
+  if (!match) return undefined;
+  return { postId: match[2], text: SHARED_POST_MESSAGE.test(content) ? '' : content.replace(match[1], '').trim() };
+}
 
 export function postLink(postId: string) {
   const web = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : '';
@@ -34,7 +40,7 @@ export async function loadShareTargets(): Promise<ShareTarget[]> {
 }
 
 export async function sendPostToConversation(conversationId: string, post: { id: string; title: string }) {
-  const message = await sendMessage(conversationId, `Check out this post: ${post.title}\n${postLink(post.id)}`);
+  const message = await sendMessage(conversationId, `${SHARE_PREFIX}${post.title}\n${postLink(post.id)}`);
   // The message is already sent; a failed email notification should not turn this into an error.
   try { await notifyMessageRecipient(message.id); } catch {}
   return message;
