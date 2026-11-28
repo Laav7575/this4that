@@ -28,6 +28,7 @@ function ShareSheet({ post, onClose }: { post: Post; onClose: () => void }) {
   const copy = async () => {
     try {
       await copyPostLink(post.id);
+      posthog.capture('post_shared', { method: 'copy_link' });
       setCopied('done');
     } catch { setCopied('error'); }
   };
@@ -36,6 +37,7 @@ function ShareSheet({ post, onClose }: { post: Post; onClose: () => void }) {
     setSends(current => ({ ...current, [conversationId]: 'sending' }));
     try {
       await sendPostToConversation(conversationId, post);
+      posthog.capture('post_shared', { method: 'message' });
       setSends(current => ({ ...current, [conversationId]: 'sent' }));
     } catch { setSends(current => ({ ...current, [conversationId]: 'error' })); }
   };
