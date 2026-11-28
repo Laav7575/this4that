@@ -133,7 +133,11 @@ function PostForm({ postId }: { postId?: string }) {
 				setCreatedPost(post);
 			}
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : `Could not ${postId ? 'save your changes' : 'publish your post'}. Try again.`);
+			if (typeof cause === 'object' && cause && 'code' in cause && cause.code === 'P4060') {
+				setError('Revise the language in your post and try again.');
+			} else {
+				setError(cause instanceof Error ? cause.message : `Could not ${postId ? 'save your changes' : 'publish your post'}. Try again.`);
+			}
 		} finally {
 			setLoading(false);
 		}

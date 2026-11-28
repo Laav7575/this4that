@@ -248,6 +248,38 @@ await asUser(a, async () => {
   await assert.rejects(db.query('select set_post_completed($1,null)',[post]));
   await assert.rejects(db.query('select set_conversation_closed($1,null)',[canonical]));
 });
+await db.exec(await readFile(new URL('../supabase/migrations/202611280001_post_moderation.sql', import.meta.url), 'utf8'));
+const create = `insert into posts(author_id,title,description,category,type,availability,location)
+    values ($1,$2,'Details','Academic','Offer','Now','Campus') returning id`;
+await asUser(a, async () => {
+  await assert.rejects(db.query("insert into private.post_blocked_terms(term) values ('Tutoring')"), { code: '42501' });
+  for (const title of ['What the FUCK!', 'Can you take my exam?', 'Looking to buy cocaine', 'Send gift-card codes']) {
+    await assert.rejects(db.query(create, [a, title]), { code: 'P4060' });
+  }
+  const legitimate = await db.query(create, [a, 'Homework tutoring, exam prep, and essay feedback']);
+  assert.equal(legitimate.rows.length, 1);
+});
+await db.query("insert into private.post_blocked_terms(term) values ('TUTORING'), ('blocked phrase')");
+for (const user of [a, b]) await asUser(user, async () => {
+  assert.equal((await db.query('select id from posts where id=$1', [post])).rows.length, 0);
+  const { rows } = await db.query('select id from search_posts(0,100,null,null,null,null,null)');
+  assert(!rows.some(row => row.id === post));
+});
+await asUser(a, async () => {
+  await assert.rejects(db.query(create, [a, 'Free ＴＵＴＯＲＩＮＧ!']), { code: 'P4060' });
+  const { rows: [clean] } = await db.query(create, [a, 'Microtutoring']);
+  await assert.rejects(db.query("update posts set description='Blocked, PHRASE!' where id=$1", [clean.id]), { code: 'P4060' });
+  assert.equal((await db.query('select description from posts where id=$1', [clean.id])).rows[0].description, 'Details');
+  await assert.rejects(db.query('select set_post_completed($1,true)', [post]), { code: '42501' });
+  await assert.rejects(db.query('select create_conversation($1,$2)', [b, post]), { code: '22023' });
+});
+await db.query("delete from private.post_blocked_terms where normalized_term='tutoring'");
+await asUser(b, async () => {
+  assert.equal((await db.query('select id from posts where id=$1', [post])).rows.length, 1);
+  const { rows } = await db.query('select id from search_posts(0,100,null,null,null,null,null)');
+  assert(rows.some(row => row.id === post));
+});
+
 await db.exec('set role anon');
 await assert.rejects(db.query('select set_post_completed($1,true)',[post]));
 await assert.rejects(db.query('select set_conversation_closed($1,true)',[canonical]));
@@ -257,4 +289,4 @@ await assert.rejects(db.query('select create_conversation($1)',[b]));
 await db.exec('reset role');
 assert(!(await db.query("select column_name from information_schema.columns where table_name='profiles'")).rows.some(r=>['email','uw_verified'].includes(r.column_name)));
 await db.close();
-console.log('PASS: message notification preference and delivery RLS, completion/closure, duplicate-history merge, conversation reuse, ownership, participant isolation, sender spoofing, membership escalation, confirmed Waterloo access, private email separation, and terms acceptance permissions.');
+console.log('PASS: post moderation, message notification preference and delivery RLS, completion/closure, duplicate-history merge, conversation reuse, ownership, participant isolation, sender spoofing, membership escalation, confirmed Waterloo access, private email separation, and terms acceptance permissions.');
