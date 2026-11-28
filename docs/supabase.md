@@ -146,3 +146,26 @@ supabase functions deploy notify-message
 ```
 
 The Supabase Auth email used for password recovery is separate; it cannot send arbitrary message alerts. If SMTP is unavailable, the message remains sent and the app reports that its email alert could not be delivered.
+
+## Filter posts by language
+
+Apply `202611280001_post_moderation.sql` to enable a starter English list. It covers strong profanity, targeted abuse, sexual solicitation, academic cheating, fraud, and unsafe transactions. The categories draw on [Discord AutoMod](https://support.discord.com/hc/en-us/articles/4421269296535-AutoMod-FAQ) and [Fiverr’s prohibited services policy](https://help.fiverr.com/hc/en-us/articles/49174165608593-Prohibited-services-on-Fiverr).
+
+Add additional terms in the Supabase SQL Editor.
+
+```sql
+insert into private.post_blocked_terms (term)
+values ('example blocked phrase')
+on conflict do nothing;
+```
+
+Replace the example with your actual terms. Matching ignores case and treats punctuation and whitespace as word separators. It checks whole words and phrases within each title, description, category, availability, and location field. For example, blocking `example blocked phrase` also matches `Example, blocked phrase!`.
+
+New posts and edits with matching language are rejected. Existing matches are hidden from feeds, search, profiles, direct links, and exchange cards. The filter applies to Supabase-backed posts. Existing chat messages are retained.
+
+Remove an entry to make existing posts visible again if they match no other blocked term.
+
+```sql
+delete from private.post_blocked_terms
+where normalized_term = private.normalize_post_language('example blocked phrase');
+```
