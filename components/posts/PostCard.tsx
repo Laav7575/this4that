@@ -30,7 +30,9 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
         <Avatar name={name} />
         <View style={styles.cardWho}>
           <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">{name}</Text>
-          <Text style={styles.meta} numberOfLines={2} ellipsizeMode="tail">{post.location} · {timeAgo(post.created_at)}</Text>
+          <Text style={styles.meta} numberOfLines={2} ellipsizeMode="tail">
+            {post.location.trim() ? `${post.location} · ` : ''}{timeAgo(post.created_at)}
+          </Text>
         </View>
         <View style={[styles.typeChip, post.completed_at ? styles.completedChip : isOffer ? styles.offerChip : styles.requestChip]}>
           <Text style={styles.typeChipText}>{post.completed_at ? 'Completed' : isOffer ? 'Offering' : 'Requesting'}</Text>
@@ -60,7 +62,9 @@ export function PostCard({ post, name, footer }: { post: PostRow; name: string; 
       </View>
       <View style={styles.tags}>
         <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.category}</Text></View>
-        <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.availability}</Text></View>
+        {post.availability.trim() ? (
+          <View style={styles.tag}><Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">{post.availability}</Text></View>
+        ) : null}
       </View>
       {!post.completed_at && footer ? <View style={styles.footer}>{footer}</View> : null}
     </Card>
